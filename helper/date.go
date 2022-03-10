@@ -19,7 +19,6 @@ func GetWeekDay(date string) string {
 		"Saturday":  "周六",
 		"Sunday":    "周日",
 	}
-
 	day, _ := time.Parse("2006-01-02", date)
 	dayInt := day.Weekday().String()
 	return WeekDayMap[dayInt]
@@ -98,7 +97,8 @@ func GetNextWeekMonday(t time.Time, fmtStr string) (day string, err error) {
 	return
 }
 
-// 通过ISOWeek翻转得到周的日期时间 https://blog.csdn.net/pingD/article/details/60964306
+// 通过ISOWeek翻转得到周的日期时间
+// @see https://blog.csdn.net/pingD/article/details/60964306
 func FirstDayOfISOWeek(year int, week int, timezone *time.Location) time.Time {
 	date := time.Date(year, 0, 0, 0, 0, 0, 0, timezone)
 	isoYear, isoWeek := date.ISOWeek()

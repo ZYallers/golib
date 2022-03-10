@@ -165,7 +165,7 @@ func (r *Request) Send() (*Response, error) {
 	} else {
 		res := NewResponse()
 		res.Raw = resp
-		defer res.Raw.Body.Close()
+		defer func() { _ = res.Raw.Body.Close() }()
 		if err := res.parseBody(); err != nil {
 			return nil, err
 		} else {
