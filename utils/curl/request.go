@@ -1,4 +1,4 @@
-package helper
+package curl
 
 import (
 	"bytes"
@@ -27,7 +27,7 @@ type Request struct {
 
 // NewRequest
 func NewRequest(url string) *Request {
-	return &Request{Url: url, client: HttpClient, Timeout: DefaultHttpClientTimeout}
+	return &Request{Url: url, client: Client, Timeout: clientTimeout}
 }
 
 // SetMethod
@@ -127,7 +127,7 @@ func (r *Request) SetBody(body io.Reader) *Request {
 
 // SetTimeOut
 func (r *Request) SetTimeOut(timeout time.Duration) *Request {
-	if timeout > 0 && timeout < DefaultHttpClientTimeout {
+	if timeout > 0 && timeout < clientTimeout {
 		r.Timeout = timeout
 	}
 	return r
@@ -171,44 +171,5 @@ func (r *Request) Send() (*Response, error) {
 		} else {
 			return res, nil
 		}
-	}
-}
-
-// Response 构造类
-type Response struct {
-	Raw     *http.Response
-	Headers map[string]string
-	Body    string
-}
-
-func NewResponse() *Response {
-	return &Response{}
-}
-
-func (r *Response) StatusCode() int {
-	if r.Raw == nil {
-		return 0
-	}
-	return r.Raw.StatusCode
-}
-
-func (r *Response) IsOk() bool {
-	return r.StatusCode() == http.StatusOK
-}
-
-func (r *Response) parseHeaders() {
-	headers := map[string]string{}
-	for k, v := range r.Raw.Header {
-		headers[k] = v[0]
-	}
-	r.Headers = headers
-}
-
-func (r *Response) parseBody() error {
-	if bts, err := IoCopy(r.Raw.Body); err != nil {
-		return err
-	} else {
-		r.Body = string(bts)
-		return nil
 	}
 }

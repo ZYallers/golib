@@ -1,6 +1,7 @@
-package helper
+package files
 
 import (
+	strings2 "github.com/ZYallers/golib/funcs/strings"
 	"os"
 	"runtime"
 	"strings"
@@ -9,7 +10,7 @@ import (
 func CurrentMethodName() string {
 	pc, _, _, _ := runtime.Caller(1)
 	name := runtime.FuncForPC(pc).Name()
-	return StrFirstToLower(name[strings.LastIndex(name, `.`)+1:])
+	return strings2.StrFirstToLower(name[strings.LastIndex(name, `.`)+1:])
 }
 
 func CurrentFileName() string {

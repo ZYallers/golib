@@ -1,4 +1,4 @@
-package helper
+package times
 
 import (
 	"github.com/ZYallers/golib/consts"

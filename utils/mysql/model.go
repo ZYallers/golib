@@ -20,7 +20,7 @@ const (
 	defaultLoc              = "Local"
 	defaultParseTime        = "true"
 	defaultMaxAllowedPacket = "0"
-	defaultTimeout          = "10s"
+	defaultTimeout          = "15s"
 	retryMaxTimes           = 3
 	defaultMaxIdleConns     = 100
 	defaultMaxOpenConns     = 100

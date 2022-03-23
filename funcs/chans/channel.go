@@ -1,4 +1,4 @@
-package helper
+package chans
 
 func SafeSendChan(ch chan<- interface{}, value interface{}) (closed bool) {
 	defer func() {

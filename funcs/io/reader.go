@@ -1,4 +1,4 @@
-package helper
+package io
 
 import (
 	"bytes"
@@ -13,7 +13,7 @@ var bufferPool = sync.Pool{
 	},
 }
 
-func IoCopy(r io.Reader) ([]byte, error) {
+func Copy(r io.Reader) ([]byte, error) {
 	dst := bufferPool.Get().(*bytes.Buffer)
 	dst.Reset()
 	defer func() {

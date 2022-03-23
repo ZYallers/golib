@@ -1,8 +1,9 @@
-package helper
+package funcs
 
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ZYallers/golib/utils/curl"
 	"github.com/axgle/mahonia"
 	"net"
 	"strings"
@@ -32,7 +33,7 @@ func GetIPByPconline(ip string) string {
 	if ip != "" {
 		url += "&ip=" + ip
 	}
-	resp, err := NewRequest(url).SetTimeOut(1 * time.Second).Get()
+	resp, err := curl.NewRequest(url).SetTimeOut(3 * time.Second).Get()
 	if err != nil || resp.Body == "" {
 		return result
 	}

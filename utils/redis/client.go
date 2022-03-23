@@ -3,10 +3,11 @@ package redis
 import (
 	"errors"
 	"fmt"
-	"github.com/ZYallers/golib/helper"
+	"github.com/ZYallers/golib/funcs/arrays"
+	strings2 "github.com/ZYallers/golib/funcs/strings"
 	"github.com/ZYallers/golib/types"
 	"github.com/ZYallers/golib/utils/json"
-	goredis "github.com/go-redis/redis"
+	redis2 "github.com/go-redis/redis"
 	"math/rand"
 	"strings"
 	"sync/atomic"
@@ -14,7 +15,7 @@ import (
 )
 
 type Redis struct {
-	Client func() *goredis.Client
+	Client func() *redis2.Client
 }
 
 const (
@@ -22,7 +23,7 @@ const (
 	hashAllFieldKey = "all"
 )
 
-func (r *Redis) NewRedis(rdc *types.RedisCollector, client *types.RedisClient) (*goredis.Client, error) {
+func (r *Redis) NewRedis(rdc *types.RedisCollector, client *types.RedisClient) (*redis2.Client, error) {
 	var err error
 	for i := 1; i <= retryMaxTimes; i++ {
 		if atomic.LoadUint32(&rdc.Done) == 0 {
@@ -50,11 +51,11 @@ func (r *Redis) NewRedis(rdc *types.RedisCollector, client *types.RedisClient) (
 	return rdc.Pointer, nil
 }
 
-func (r *Redis) newClient(client *types.RedisClient) (*goredis.Client, error) {
+func (r *Redis) newClient(client *types.RedisClient) (*redis2.Client, error) {
 	if client == nil {
 		return nil, errors.New("redis client is nil")
 	}
-	rds := goredis.NewClient(&goredis.Options{
+	rds := redis2.NewClient(&redis2.Options{
 		Addr:     client.Host + ":" + client.Port,
 		Password: client.Pwd,
 		DB:       client.Db,
@@ -72,7 +73,7 @@ func (r *Redis) NoDataExpiration() time.Duration {
 // 从String类型的缓存中读取数据，如没则重新调用指定方法重新从数据库中读取并写入缓存
 func (r *Redis) CacheWithString(key string, output interface{}, expiration time.Duration, fn func() (interface{}, bool)) error {
 	if val := r.Client().Get(key).Val(); val != "" {
-		return json.Unmarshal(helper.String2Bytes(val), &output)
+		return json.Unmarshal(strings2.String2Bytes(val), &output)
 	}
 
 	var (
@@ -89,7 +90,7 @@ func (r *Redis) CacheWithString(key string, output interface{}, expiration time.
 	if err != nil {
 		value = "null"
 	} else {
-		value = helper.Bytes2String(bte)
+		value = strings2.Bytes2String(bte)
 		_ = json.Unmarshal(bte, &output)
 	}
 	return r.Client().Set(key, value, expiration).Err()
@@ -105,7 +106,7 @@ func (r *Redis) HGetAll(key string) (result []interface{}) {
 	if all == "" {
 		return
 	}
-	keys := helper.RemoveDuplicateWithString(strings.Split(all, ","))
+	keys := arrays.RemoveDuplicateWithString(strings.Split(all, ","))
 	if len(keys) == 0 {
 		return
 	}
@@ -121,7 +122,7 @@ func (r *Redis) HMSet(key string, data map[string]interface{}) error {
 			continue
 		}
 		if b, err := json.Marshal(v); err == nil {
-			fieldValues[k] = helper.Bytes2String(b)
+			fieldValues[k] = strings2.Bytes2String(b)
 			fields = append(fields, k)
 		}
 	}
@@ -136,7 +137,7 @@ func (r *Redis) HMSet(key string, data map[string]interface{}) error {
 
 	var allFieldValue string
 	if len(fields) > 0 {
-		allFieldValue = strings.Join(helper.RemoveDuplicateWithString(fields), ",")
+		allFieldValue = strings.Join(arrays.RemoveDuplicateWithString(fields), ",")
 	}
 	fieldValues[hashAllFieldKey] = allFieldValue
 	return r.Client().HMSet(key, fieldValues).Err()
@@ -149,7 +150,7 @@ func (r *Redis) HMDelete(key string, fields ...string) error {
 	}
 	if len(newFields) > 0 {
 		for _, field := range fields {
-			newFields = helper.RemoveWithString(newFields, field)
+			newFields = arrays.RemoveWithString(newFields, field)
 		}
 	}
 
