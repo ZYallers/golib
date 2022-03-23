@@ -1,4 +1,4 @@
-package helper
+package php
 
 import (
 	"github.com/syyongx/php2go"
