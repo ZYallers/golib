@@ -10,7 +10,7 @@ import (
 //  @return time.Duration ...
 func TodayRemainSecond() time.Duration {
 	todayLast := time.Now().Format("2006-01-02") + " 23:59:59"
-	lastTime, _ := time.ParseInLocation(env.TimeFormat, todayLast, time.Local)
+	lastTime, _ := time.ParseInLocation(consts.TimeFormat, todayLast, time.Local)
 	return time.Duration(lastTime.Unix()-time.Now().Local().Unix()) * time.Second
 }
 
