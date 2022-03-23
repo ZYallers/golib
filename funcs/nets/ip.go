@@ -1,4 +1,4 @@
-package funcs
+package nets
 
 import (
 	"encoding/json"
