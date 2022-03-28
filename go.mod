@@ -12,6 +12,7 @@ require (
 	github.com/onsi/gomega v1.18.1 // indirect
 	github.com/syyongx/php2go v0.9.6
 	github.com/techoner/gophp v0.2.0
+	github.com/tidwall/gjson v1.6.1
 	go.uber.org/zap v1.21.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gorm.io/driver/mysql v1.0.3
