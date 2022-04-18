@@ -133,6 +133,17 @@ func (m *Model) Save(value interface{}, id ...int) (interface{}, error) {
 	return value, m.DB().Table(m.Table).Create(value).Error
 }
 
+func (m *Model) SaveOrUpdate(value interface{}, fields string, id int) (interface{}, error) {
+	db := m.DB().Table(m.Table)
+	if fields != "" {
+		db = db.Select(fields)
+	}
+	if id > 0 {
+		return value, db.Updates(value).Error
+	}
+	return value, db.Create(value).Error
+}
+
 func (m *Model) Update(where []interface{}, value interface{}) error {
 	return m.DB().Table(m.Table).Where(where[0], where[1:]...).Updates(value).Error
 }
