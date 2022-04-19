@@ -6,6 +6,7 @@ import (
 	"github.com/ZYallers/golib/types"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"strings"
 	"sync/atomic"
 	"time"
 )
@@ -126,19 +127,27 @@ func (m *Model) FindOne(dest interface{}, where []interface{}, fields, order str
 	m.Find(dest, where, fields, order, 0, 1)
 }
 
-func (m *Model) Save(value interface{}, id ...int) (interface{}, error) {
-	if len(id) > 0 && id[0] > 0 {
-		return value, m.DB().Table(m.Table).Updates(value).Error
+func (m *Model) Save(value interface{}, updates ...interface{}) (interface{}, error) {
+	db := m.DB().Table(m.Table)
+	if ul := len(updates); ul > 0 {
+		if i, ok := updates[0].(int); ok && i > 0 {
+			if ul > 1 {
+				if s, ok := updates[1].(string); ok && s != "" {
+					db = db.Select(strings.Split(s, ","))
+				}
+			}
+			return value, db.Updates(value).Error
+		}
 	}
-	return value, m.DB().Table(m.Table).Create(value).Error
+	return value, db.Create(value).Error
 }
 
-func (m *Model) SaveOrUpdate(value interface{}, fields string, id int) (interface{}, error) {
+func (m *Model) SaveOrUpdate(value interface{}, primaryKey int, updateFields string) (interface{}, error) {
 	db := m.DB().Table(m.Table)
-	if fields != "" {
-		db = db.Select(fields)
-	}
-	if id > 0 {
+	if primaryKey > 0 {
+		if updateFields != "" {
+			db = db.Select(strings.Split(updateFields, ","))
+		}
 		return value, db.Updates(value).Error
 	}
 	return value, db.Create(value).Error
