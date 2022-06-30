@@ -23,7 +23,9 @@ const (
 )
 
 type GormLogSender interface {
-	PushMessage(string)
+	Push(string)
+	Open() bool
+	Always() bool
 }
 
 type logger struct {
@@ -58,14 +60,19 @@ func (l logger) Printf(level gormLogger.LogLevel, format string, v ...interface{
 	switch level {
 	case gormLogger.Error:
 		l.Writer.Error(s)
-		l.PushMessage(s)
+		if l.Open() {
+			l.Push(s)
+		}
 	case gormLogger.Warn:
 		l.Writer.Warn(s)
-		l.PushMessage(s)
-	case gormLogger.Info:
-		l.Writer.Info(s)
+		if l.Open() {
+			l.Push(s)
+		}
 	default:
-		l.Writer.Debug(s)
+		l.Writer.Info(s)
+		if l.Open() && l.Always() {
+			l.Push(s)
+		}
 	}
 }
 
