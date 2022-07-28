@@ -1,7 +1,6 @@
 package redis
 
 import (
-	strings2 "github.com/ZYallers/golib/funcs/strings"
 	"github.com/ZYallers/golib/utils/json"
 	"math/rand"
 	"time"
@@ -17,7 +16,7 @@ func (r *Redis) NoDataExpiration() time.Duration {
 // 从String类型的缓存中读取数据，如没则重新调用指定方法重新从数据库中读取并写入缓存
 func (r *Redis) CacheWithString(key string, output interface{}, expire time.Duration, fn func() (interface{}, bool)) error {
 	if val := r.Client().Get(key).Val(); val != "" {
-		return json.Unmarshal(strings2.String2Bytes(val), &output)
+		return json.Unmarshal([]byte(val), &output)
 	}
 	var (
 		isNull bool
@@ -31,7 +30,7 @@ func (r *Redis) CacheWithString(key string, output interface{}, expire time.Dura
 	if err != nil {
 		value = "null"
 	} else {
-		value = strings2.Bytes2String(bte)
+		value = string(bte)
 		_ = json.Unmarshal(bte, &output)
 	}
 	return r.Client().Set(key, value, expire).Err()

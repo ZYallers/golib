@@ -3,7 +3,6 @@ package redis
 import (
 	"errors"
 	"github.com/ZYallers/golib/funcs/arrays"
-	strings2 "github.com/ZYallers/golib/funcs/strings"
 	"github.com/ZYallers/golib/utils/json"
 	"strings"
 )
@@ -31,7 +30,7 @@ func (r *Redis) HMSet(key string, data map[string]interface{}) error {
 			continue
 		}
 		if b, err := json.Marshal(v); err == nil {
-			fieldValues[k] = strings2.Bytes2String(b)
+			fieldValues[k] = string(b)
 			fields = append(fields, k)
 		}
 	}
