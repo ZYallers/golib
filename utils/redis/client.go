@@ -30,12 +30,11 @@ func (r *Redis) NewRedis(rdc *types.RedisCollector, cli *types.RedisClient, opti
 			opts.Password = cli.Pwd
 			opts.DB = cli.Db
 			rdc.Pointer = redis.NewClient(opts)
+		}
+		if rdc.Pointer == nil {
+			err = fmt.Errorf("new redis(%s:%s) is nil", cli.Host, cli.Port)
 		} else {
-			if rdc.Pointer == nil {
-				err = fmt.Errorf("new redis(%s:%s) is nil", cli.Host, cli.Port)
-			} else {
-				err = rdc.Pointer.Ping().Err()
-			}
+			err = rdc.Pointer.Ping().Err()
 		}
 		if err != nil {
 			atomic.StoreUint32(&rdc.Done, 0)
