@@ -1,10 +1,9 @@
 package redis
 
 import (
-	"errors"
 	"fmt"
 	"github.com/ZYallers/golib/types"
-	redis2 "github.com/go-redis/redis"
+	"github.com/go-redis/redis"
 	"sync/atomic"
 	"time"
 )
@@ -15,30 +14,28 @@ const (
 )
 
 type Redis struct {
-	Client func() *redis2.Client
+	Client func() *redis.Client
 }
 
-func (r *Redis) NewRedis(rdc *types.RedisCollector, client *types.RedisClient, options func() *redis2.Options) (*redis2.Client, error) {
-	if client == nil {
-		return nil, errors.New("redis client is nil")
-	}
+func (r *Redis) NewRedis(rdc *types.RedisCollector, cli *types.RedisClient, options func() *redis.Options) (*redis.Client, error) {
 	var err error
 	for i := 1; i <= retryMaxTimes; i++ {
 		if atomic.LoadUint32(&rdc.Done) == 0 {
 			atomic.StoreUint32(&rdc.Done, 1)
-			opts := &redis2.Options{}
+			opts := &redis.Options{}
 			if options != nil {
 				opts = options()
 			}
-			opts.Addr = client.Host + ":" + client.Port
-			opts.Password = client.Pwd
-			opts.DB = client.Db
-			rdc.Pointer = redis2.NewClient(opts)
-		}
-		if rdc.Pointer == nil {
-			err = fmt.Errorf("new redis(%s:%s) is nil", client.Host, client.Port)
+			opts.Addr = cli.Host + ":" + cli.Port
+			opts.Password = cli.Pwd
+			opts.DB = cli.Db
+			rdc.Pointer = redis.NewClient(opts)
 		} else {
-			err = rdc.Pointer.Ping().Err()
+			if rdc.Pointer == nil {
+				err = fmt.Errorf("new redis(%s:%s) is nil", cli.Host, cli.Port)
+			} else {
+				err = rdc.Pointer.Ping().Err()
+			}
 		}
 		if err != nil {
 			atomic.StoreUint32(&rdc.Done, 0)
@@ -46,7 +43,7 @@ func (r *Redis) NewRedis(rdc *types.RedisCollector, client *types.RedisClient, o
 				time.Sleep(retrySleepTime)
 				continue
 			} else {
-				return nil, fmt.Errorf("new redis(%s:%s) error: %v", client.Host, client.Port, err)
+				return nil, fmt.Errorf("new redis(%s:%s) error: %v", cli.Host, cli.Port, err)
 			}
 		}
 		break

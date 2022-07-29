@@ -1,7 +1,7 @@
 package mysql
 
 import (
-	"errors"
+	"database/sql"
 	"fmt"
 	"github.com/ZYallers/golib/types"
 	"gorm.io/gorm"
@@ -12,8 +12,8 @@ import (
 const (
 	retryMaxTimes          = 3
 	retrySleepTime         = 100 * time.Millisecond
-	defaultMaxIdleConns    = 100
-	defaultMaxOpenConns    = 100
+	defaultMaxIdleConns    = 25
+	defaultMaxOpenConns    = 50
 	defaultConnMaxLifetime = 5 * time.Minute
 )
 
@@ -22,26 +22,26 @@ type Model struct {
 	DB    func() *gorm.DB
 }
 
-func (m *Model) NewMysql(dbc *types.DBCollector, dialect *types.MysqlDialect, config func() *gorm.Config) (*gorm.DB, error) {
-	if dialect == nil {
-		return nil, errors.New("mysql dialect is nil")
-	}
+func (m *Model) NewMysql(dbc *types.DBCollector, mdt *types.MysqlDialect, cfg func() *gorm.Config) (*gorm.DB, error) {
 	var err error
 	for i := 1; i <= retryMaxTimes; i++ {
 		if atomic.LoadUint32(&dbc.Done) == 0 {
 			atomic.StoreUint32(&dbc.Done, 1)
-			if dbc.Pointer, err = gorm.Open(m.Dialector(dialect), config()); err == nil && dbc.Pointer != nil {
-				m.defaultConfig(dbc.Pointer)
+			if dbc.Pointer, err = gorm.Open(m.Dialector(mdt), cfg()); err == nil {
+				var db *sql.DB
+				if db, err = dbc.Pointer.DB(); err == nil {
+					db.SetMaxIdleConns(defaultMaxIdleConns)       // 设置连接池中空闲连接的最大数量
+					db.SetMaxOpenConns(defaultMaxOpenConns)       // 设置打开数据库连接的最大数量
+					db.SetConnMaxLifetime(defaultConnMaxLifetime) // 设置了连接可复用的最大时间
+				}
 			}
-		}
-		if err == nil {
+		} else {
 			if dbc.Pointer == nil {
-				err = fmt.Errorf("new mysql %s is nil", dialect.Db)
+				err = fmt.Errorf("new mysql %s is nil", mdt.Db)
 			} else {
-				if sqlDB, err2 := dbc.Pointer.DB(); err2 != nil {
-					err = err2
-				} else {
-					err = sqlDB.Ping()
+				var db *sql.DB
+				if db, err = dbc.Pointer.DB(); err == nil {
+					err = db.Ping()
 				}
 			}
 		}
@@ -51,21 +51,10 @@ func (m *Model) NewMysql(dbc *types.DBCollector, dialect *types.MysqlDialect, co
 				time.Sleep(retrySleepTime)
 				continue
 			} else {
-				return nil, fmt.Errorf("new mysql %s error: %v", dialect.Db, err)
+				return nil, fmt.Errorf("new mysql %s error: %v", mdt.Db, err)
 			}
 		}
 		break
 	}
 	return dbc.Pointer, nil
-}
-
-func (m *Model) defaultConfig(db *gorm.DB) {
-	if sqlDB, err := db.DB(); err == nil {
-		// 设置连接池中空闲连接的最大数量
-		sqlDB.SetMaxIdleConns(defaultMaxIdleConns)
-		// 设置打开数据库连接的最大数量
-		sqlDB.SetMaxOpenConns(defaultMaxOpenConns)
-		// 设置了连接可复用的最大时间
-		sqlDB.SetConnMaxLifetime(defaultConnMaxLifetime)
-	}
 }

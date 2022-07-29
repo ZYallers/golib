@@ -3,8 +3,8 @@ package types
 import "github.com/go-redis/redis"
 
 type RedisClient struct {
-	Host, Port, Pwd string
 	Db              int
+	Host, Port, Pwd string
 }
 
 type RedisCollector struct {
