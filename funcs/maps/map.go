@@ -6,7 +6,6 @@ import (
 	"strings"
 )
 
-// 深度copy(Map/Slice)
 func DeepCopy(value interface{}) interface{} {
 	if valueMap, ok := value.(map[string]interface{}); ok {
 		newMap := make(map[string]interface{})
@@ -24,7 +23,6 @@ func DeepCopy(value interface{}) interface{} {
 	return value
 }
 
-// 经典排序返回a=1&b=1
 func SortMapByKey(mp map[string]interface{}) string {
 	if len(mp) == 0 {
 		return ""
@@ -41,7 +39,6 @@ func SortMapByKey(mp map[string]interface{}) string {
 	return strings.TrimRight(str, "&")
 }
 
-// 结构体转为map
 func Struct2Map(obj interface{}) map[string]interface{} {
 	t := reflect.TypeOf(obj)
 	v := reflect.ValueOf(obj)

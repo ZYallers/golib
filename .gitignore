@@ -12,8 +12,11 @@
 *.out
 
 # Other
+vendor
+go.sum
 .idea
 .DS_Store
 .vscode
-go.sum
-vendor
+*.log
+
+

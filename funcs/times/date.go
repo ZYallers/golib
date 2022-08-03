@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// 输入日期转周几
+// 日期转周几
 func GetWeekDay(date string) string {
 	var WeekDayMap = map[string]string{
 		"Monday":    "周一",
@@ -24,7 +24,7 @@ func GetWeekDay(date string) string {
 	return WeekDayMap[dayInt]
 }
 
-// BirthdayToAge 根据生日算年龄
+// 根据生日算年龄
 func BirthdayToAge(birthday string) (age int) {
 	if len(strings.Split(birthday, `-`)) == 2 {
 		birthday = birthday + `-01` // 补上日期
@@ -58,9 +58,8 @@ func GetTimeRemainSeconds(startTimeStr, endTimeStr string) int {
 	loc, _ := time.LoadLocation("Local")
 	startTime, _ := time.ParseInLocation(timeLayOut, startTimeStr, loc)
 
-	//重要：获取时区
-	theTime, _ := time.ParseInLocation(timeLayOut, endTimeStr, loc) //使用模板在对应时区转化为time.time类型
-	remain := math.Floor(theTime.Sub(startTime).Seconds())          //获取距离当前的描述
+	theTime, _ := time.ParseInLocation(timeLayOut, endTimeStr, loc) // 使用模板在对应时区转化为time.time类型
+	remain := math.Floor(theTime.Sub(startTime).Seconds())          // 获取距离当前的秒数
 
 	return int(remain)
 }

@@ -19,7 +19,6 @@ func CurrentFileName() string {
 	return file[0:strings.Index(file, `.`)]
 }
 
-// 检查文件是否存在
 func FileIsExist(path string) bool {
 	_, err := os.Stat(path)
 	if err != nil {

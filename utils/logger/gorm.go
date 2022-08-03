@@ -59,17 +59,23 @@ func (l logger) Printf(level gormLogger.LogLevel, format string, v ...interface{
 	s := fmt.Sprintf(format, v...)
 	switch level {
 	case gormLogger.Error:
-		l.Writer.Error(s)
+		if l.Writer != nil {
+			l.Writer.Error(s)
+		}
 		if l.Open() {
 			l.Push(s)
 		}
 	case gormLogger.Warn:
-		l.Writer.Warn(s)
+		if l.Writer != nil {
+			l.Writer.Warn(s)
+		}
 		if l.Open() {
 			l.Push(s)
 		}
 	default:
-		l.Writer.Info(s)
+		if l.Writer != nil {
+			l.Writer.Info(s)
+		}
 		if l.Open() && l.Always() {
 			l.Push(s)
 		}

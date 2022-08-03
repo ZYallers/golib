@@ -1,6 +1,7 @@
+//go:build darwin || dragonfly || freebsd || linux || netbsd || openbsd || plan9 || solaris
 // +build darwin dragonfly freebsd linux netbsd openbsd plan9 solaris
 
-package tool
+package execs
 
 import (
 	"context"
@@ -15,7 +16,7 @@ type shellResult struct {
 	err    error
 }
 
-// 执行shell命令，可设置执行超时时间
+// Execute the shell command to set the execution timeout
 func ExecShellWithContext(ctx context.Context, command string) (string, error) {
 	cmd := exec.Command("/bin/bash", "-c", command)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}

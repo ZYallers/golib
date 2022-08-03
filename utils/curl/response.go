@@ -5,7 +5,6 @@ import (
 	"net/http"
 )
 
-// Response 构造类
 type Response struct {
 	Raw     *http.Response
 	Headers map[string]string

@@ -6,7 +6,6 @@ import (
 	"time"
 )
 
-// Time 自定义时间
 type Time time.Time
 
 const (
@@ -14,14 +13,14 @@ const (
 	zone   = "Asia/Shanghai"
 )
 
-// UnmarshalJSON implements json unmarshal interface.
+// implements json unmarshal interface.
 func (t *Time) UnmarshalJSON(data []byte) (err error) {
 	now, err := time.ParseInLocation(`"`+format+`"`, string(data), time.Local)
 	*t = Time(now)
 	return
 }
 
-// MarshalJSON implements json marshal interface.
+// implements json marshal interface.
 func (t Time) MarshalJSON() ([]byte, error) {
 	if time.Time(t).IsZero() {
 		return []byte{'n', 'u', 'l', 'l'}, nil
@@ -34,18 +33,15 @@ func (t Time) MarshalJSON() ([]byte, error) {
 	return b, nil
 }
 
-// String ...
 func (t Time) String() string {
 	return time.Time(t).Format(format)
 }
 
-// local ...
 func (t Time) local() time.Time {
 	loc, _ := time.LoadLocation(zone)
 	return time.Time(t).In(loc)
 }
 
-// Value ...
 func (t Time) Value() (driver.Value, error) {
 	var zeroTime time.Time
 	var ti = time.Time(t)
@@ -55,7 +51,6 @@ func (t Time) Value() (driver.Value, error) {
 	return ti, nil
 }
 
-// Scan value of time.Time
 func (t *Time) Scan(v interface{}) error {
 	value, ok := v.(time.Time)
 	if ok {

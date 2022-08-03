@@ -2,7 +2,7 @@ package arrays
 
 import "reflect"
 
-// 判断某一个值是否含在切片之中
+// Determine whether a value is included in the array
 func InArray(val interface{}, array interface{}) (exists bool, index int) {
 	exists = false
 	index = -1
@@ -20,7 +20,7 @@ func InArray(val interface{}, array interface{}) (exists bool, index int) {
 	return
 }
 
-// 取两个切片的交集
+// Get the intersection of two slices
 func Intersect(slice1 []int, slice2 []int) []int {
 	m := make(map[int]int)
 	n := make([]int, 0)
@@ -36,21 +36,20 @@ func Intersect(slice1 []int, slice2 []int) []int {
 	return n
 }
 
-// 取要校验的和已经校验过的差集，找出需要校验的切片IP（找出slice1中  slice2中没有的）
-func Difference(slice1, slice2 []int) []int {
+// Find out the elements in s1 and not in s2
+func Difference(s1, s2 []int) []int {
 	m := make(map[int]int)
 	n := make([]int, 0)
-	inter := Intersect(slice1, slice2)
+	inter := Intersect(s1, s2)
 	for _, v := range inter {
 		m[v]++
 	}
-	for _, value := range slice1 {
+	for _, value := range s1 {
 		if m[value] == 0 {
 			n = append(n, value)
 		}
 	}
-
-	for _, v := range slice2 {
+	for _, v := range s2 {
 		if m[v] == 0 {
 			n = append(n, v)
 		}
@@ -58,47 +57,35 @@ func Difference(slice1, slice2 []int) []int {
 	return n
 }
 
-//  RemoveDuplicateWithInt 去除重复值
-//  @author Cloud|2021-12-12 18:20:52
-//  @param arr []int ...
-//  @return []int ...
+// Remove duplicate values
 func RemoveDuplicateWithInt(arr []int) []int {
-	var result []int      // 存放返回的不重复切片
-	tmp := map[int]byte{} // 存放不重复主键
+	var result []int
+	tmp := map[int]byte{}
 	for _, val := range arr {
 		l := len(tmp)
-		tmp[val] = 0 // 当e存在于tempMap中时，再次添加是添加不进去的，，因为key不允许重复
-		// 如果上一行添加成功，那么长度发生变化且此时元素一定不重复
-		if len(tmp) != l { // 加入map后，map长度变化，则元素不重复
-			result = append(result, val) // 当元素不重复时，将元素添加到切片result中
+		tmp[val] = 0
+		if len(tmp) != l {
+			result = append(result, val)
 		}
 	}
 	return result
 }
 
-//  RemoveDuplicateWithString 去除重复值
-//  @author Cloud|2021-12-13 09:33:05
-//  @param arr []string ...
-//  @return []string ...
+// Remove duplicate values
 func RemoveDuplicateWithString(arr []string) []string {
-	var result []string      // 存放返回的不重复切片
-	tmp := map[string]byte{} // 存放不重复主键
+	var result []string
+	tmp := map[string]byte{}
 	for _, val := range arr {
 		l := len(tmp)
-		tmp[val] = 0 // 当e存在于tempMap中时，再次添加是添加不进去的，，因为key不允许重复
-		// 如果上一行添加成功，那么长度发生变化且此时元素一定不重复
-		if len(tmp) != l { // 加入map后，map长度变化，则元素不重复
-			result = append(result, val) // 当元素不重复时，将元素添加到切片result中
+		tmp[val] = 0
+		if len(tmp) != l {
+			result = append(result, val)
 		}
 	}
 	return result
 }
 
-//  RemoveWithString 删除数组中的指定值
-//  @author Cloud|2021-12-12 18:20:21
-//  @param arr []string ...
-//  @param in string ...
-//  @return []string ...
+// Delete the specified value in the array
 func RemoveWithString(arr []string, in string) []string {
 	for k, v := range arr {
 		if v == in {
@@ -109,11 +96,7 @@ func RemoveWithString(arr []string, in string) []string {
 	return arr
 }
 
-//  RemoveWithInt 删除数组中的指定值
-//  @author Cloud|2021-12-14 12:15:15
-//  @param arr []int ...
-//  @param in int ...
-//  @return []int ...
+// Delete the specified value in the array
 func RemoveWithInt(arr []int, in int) []int {
 	for k, v := range arr {
 		if v == in {

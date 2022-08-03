@@ -25,24 +25,20 @@ type Request struct {
 	Body     io.Reader
 }
 
-// NewRequest
 func NewRequest(url string) *Request {
 	return &Request{Url: url, client: Client, Timeout: clientTimeout}
 }
 
-// SetMethod
 func (r *Request) SetMethod(method string) *Request {
 	r.Method = method
 	return r
 }
 
-// SetUrl
 func (r *Request) SetUrl(url string) *Request {
 	r.Url = url
 	return r
 }
 
-// SetHeaders
 func (r *Request) SetHeaders(headers map[string]string) *Request {
 	r.Headers = headers
 	return r
@@ -56,7 +52,6 @@ func (r *Request) setHeaders() *Request {
 	return r
 }
 
-// SetCookies
 func (r *Request) SetCookies(cookies map[string]string) *Request {
 	r.Cookies = cookies
 	return r
@@ -86,7 +81,6 @@ func (r *Request) setQueries() *Request {
 	return r
 }
 
-// SetPostData
 func (r *Request) SetPostData(postData map[string]interface{}) *Request {
 	if postData != nil {
 		r.PostData = postData
@@ -116,7 +110,6 @@ func (r *Request) setPostData() (err error) {
 	return
 }
 
-// SetBody
 func (r *Request) SetBody(body io.Reader) *Request {
 	if body != nil {
 		r.Body = body
@@ -125,7 +118,6 @@ func (r *Request) SetBody(body io.Reader) *Request {
 	return r
 }
 
-// SetTimeOut
 func (r *Request) SetTimeOut(timeout time.Duration) *Request {
 	if timeout > 0 && timeout < clientTimeout {
 		r.Timeout = timeout

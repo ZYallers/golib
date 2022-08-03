@@ -1,42 +1,42 @@
 package logger
 
 import (
+	"github.com/ZYallers/golib/consts"
+	"github.com/ZYallers/golib/funcs/safe"
 	"github.com/natefinch/lumberjack"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"sync"
-	"sync/atomic"
+	"path/filepath"
 	"time"
 )
 
 const (
-	fileMaxSize  = 100 // Unit: MB
-	maxBackups   = 20
-	fileSuffix   = `.log`
-	cacheMaxSize = 100
+	// the maximum size in megabytes of the log file before it gets rotated. It defaults to 100 megabytes.
+	maxSize = 100
+	// the maximum number of old log files to retain. The default is to retain all old log files (though MaxAge may still cause them to get deleted.
+	maxBackups = 20
+	// the log files suffix.
+	suffix = ".log"
 )
 
 var (
-	loggerDir                string
-	loggerCache, lumberCache sync.Map
-	loggerCounter            int32
-	levelEnabler             zap.LevelEnablerFunc = func(lvl zapcore.Level) bool {
-		return lvl >= zapcore.DebugLevel
-	}
-	jsonEncoder = zapcore.NewJSONEncoder(zapcore.EncoderConfig{
-		TimeKey:       "ts",
-		LevelKey:      "level",
-		NameKey:       "logger",
-		CallerKey:     "caller",
-		MessageKey:    "msg",
-		StacktraceKey: "stacktrace",
-		LineEnding:    zapcore.DefaultLineEnding,
-		EncodeLevel:   zapcore.LowercaseLevelEncoder,
-		EncodeTime: func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
-			enc.AppendString(t.Format("2006/01/02 15:04:05.000"))
-		},
+	loggerDir    string
+	loggerDict                        = safe.NewDict()
+	levelEnabler zap.LevelEnablerFunc = func(l zapcore.Level) bool { return l >= zapcore.DebugLevel }
+	jsonEncoder                       = zapcore.NewJSONEncoder(zapcore.EncoderConfig{
+		TimeKey:        "ts",
+		LevelKey:       "level",
+		NameKey:        "logger",
+		CallerKey:      "caller",
+		MessageKey:     "msg",
+		StacktraceKey:  "stacktrace",
+		LineEnding:     zapcore.DefaultLineEnding,
+		EncodeLevel:    zapcore.LowercaseLevelEncoder,
 		EncodeDuration: zapcore.SecondsDurationEncoder,
 		EncodeCaller:   zapcore.ShortCallerEncoder,
+		EncodeTime: func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
+			enc.AppendString(t.Format(consts.TimeFormatLogger))
+		},
 	})
 )
 
@@ -49,46 +49,22 @@ func GetLoggerDir() string {
 }
 
 func Use(filename string) *zap.Logger {
-	if filename == "" || loggerDir == "" {
-		return nil
+	fn, dir := filename, loggerDir
+	if fn == "" {
+		fn = time.Now().Format("20060102")
 	}
-
-	filePath := loggerDir + "/" + filename + fileSuffix
-
-	// 判断是否已存在缓存中
-	if logger, ok := loggerCache.Load(filePath); ok {
-		return logger.(*zap.Logger)
+	if dir == "" {
+		dir, _ = filepath.Abs(filepath.Dir("."))
 	}
-
-	// 判断容器是否达到最大数量
-	if atomic.LoadInt32(&loggerCounter) >= cacheMaxSize {
-		// 超出最大容量，随机删除一半
-		var counter, clean int32 = 0, cacheMaxSize / 2
-		loggerCache.Range(func(key, value interface{}) bool {
-			if counter++; counter > clean {
-				return false
-			}
-			if lumber, ok := lumberCache.Load(key); ok {
-				_ = lumber.(*lumberjack.Logger).Close()
-			}
-			lumberCache.Delete(key)
-			loggerCache.Delete(key)
-			return true
-		})
-		atomic.AddInt32(&loggerCounter, -clean)
-	}
-
-	logger, hook := newLogger(filePath)
-	loggerCache.Store(filePath, logger)
-	lumberCache.Store(filePath, hook)
-	atomic.AddInt32(&loggerCounter, 1)
-
-	return logger
+	fp, _ := filepath.Abs(dir + "/" + fn + suffix)
+	return NewLogger(fp)
 }
 
-func newLogger(file string) (*zap.Logger, *lumberjack.Logger) {
-	hook := &lumberjack.Logger{MaxSize: fileMaxSize, MaxBackups: maxBackups, LocalTime: true, Compress: false, Filename: file}
-	logger := zap.New(zapcore.NewCore(jsonEncoder, zapcore.AddSync(hook), levelEnabler))
-	logger.Info("new logger succeed", zap.String("filename", hook.Filename))
-	return logger, hook
+func NewLogger(filename string) *zap.Logger {
+	logger, _ := loggerDict.GetOrPutFunc(filename, func(fn string) (interface{}, error) {
+		lumber := &lumberjack.Logger{MaxSize: maxSize, MaxBackups: maxBackups, LocalTime: true, Compress: false, Filename: fn}
+		logger := zap.New(zapcore.NewCore(jsonEncoder, zapcore.AddSync(lumber), levelEnabler))
+		return logger, nil
+	})
+	return logger.(*zap.Logger)
 }

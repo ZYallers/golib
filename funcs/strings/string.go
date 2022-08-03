@@ -35,7 +35,6 @@ func StrFirstToLower(str string) string {
 	return string(strArr)
 }
 
-// MD5
 func MD5(str string) string {
 	w := md5.New()
 	_, _ = io.WriteString(w, str)

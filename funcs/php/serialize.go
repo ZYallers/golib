@@ -9,8 +9,8 @@ import (
 func Unserialize(str string) map[string]interface{} {
 	vars := make(map[string]interface{}, 10)
 	offset := 0
-	strlen := php2go.Strlen(str)
-	for offset < strlen {
+	sl := php2go.Strlen(str)
+	for offset < sl {
 		if index := strings.Index(php2go.Substr(str, uint(offset), -1), "|"); index < 0 {
 			break
 		}
@@ -31,8 +31,8 @@ func Unserialize(str string) map[string]interface{} {
 
 func Serialize(vars map[string]interface{}) (str string) {
 	for k, v := range vars {
-		shal, _ := serialize.Marshal(v)
-		str += k + "|" + string(shal)
+		sa, _ := serialize.Marshal(v)
+		str += k + "|" + string(sa)
 	}
 	return
 }
