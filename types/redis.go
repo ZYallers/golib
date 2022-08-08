@@ -1,6 +1,9 @@
 package types
 
-import "github.com/go-redis/redis"
+import (
+	"github.com/go-redis/redis"
+	"sync"
+)
 
 type RedisClient struct {
 	Db              int
@@ -9,5 +12,6 @@ type RedisClient struct {
 
 type RedisCollector struct {
 	Done    uint32
+	M       sync.Mutex
 	Pointer *redis.Client
 }

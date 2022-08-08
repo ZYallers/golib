@@ -21,15 +21,19 @@ func (r *Redis) NewRedis(rdc *types.RedisCollector, cli *types.RedisClient, opti
 	var err error
 	for i := 1; i <= retryMaxTimes; i++ {
 		if atomic.LoadUint32(&rdc.Done) == 0 {
-			atomic.StoreUint32(&rdc.Done, 1)
-			opts := &redis.Options{}
-			if options != nil {
-				opts = options()
+			rdc.M.Lock()
+			if rdc.Done == 0 {
+				opts := &redis.Options{}
+				if options != nil {
+					opts = options()
+				}
+				opts.Addr = cli.Host + ":" + cli.Port
+				opts.Password = cli.Pwd
+				opts.DB = cli.Db
+				rdc.Pointer = redis.NewClient(opts)
+				atomic.StoreUint32(&rdc.Done, 1)
 			}
-			opts.Addr = cli.Host + ":" + cli.Port
-			opts.Password = cli.Pwd
-			opts.DB = cli.Db
-			rdc.Pointer = redis.NewClient(opts)
+			rdc.M.Unlock()
 		}
 		if rdc.Pointer == nil {
 			err = fmt.Errorf("new redis(%s:%s) is nil", cli.Host, cli.Port)
@@ -37,9 +41,13 @@ func (r *Redis) NewRedis(rdc *types.RedisCollector, cli *types.RedisClient, opti
 			err = rdc.Pointer.Ping().Err()
 		}
 		if err != nil {
-			atomic.StoreUint32(&rdc.Done, 0)
 			if i < retryMaxTimes {
-				time.Sleep(retrySleepTime)
+				rdc.M.Lock()
+				if rdc.Done == 1 {
+					time.Sleep(retrySleepTime)
+					atomic.StoreUint32(&rdc.Done, 0)
+				}
+				rdc.M.Unlock()
 				continue
 			} else {
 				return nil, fmt.Errorf("new redis(%s:%s) error: %v", cli.Host, cli.Port, err)
