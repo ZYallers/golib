@@ -26,15 +26,19 @@ func (m *Model) NewMysql(dbc *types.DBCollector, mdt *types.MysqlDialect, cfg fu
 	var err error
 	for i := 1; i <= retryMaxTimes; i++ {
 		if atomic.LoadUint32(&dbc.Done) == 0 {
-			atomic.StoreUint32(&dbc.Done, 1)
-			if dbc.Pointer, err = gorm.Open(m.Dialector(mdt), cfg()); err == nil {
-				var db *sql.DB
-				if db, err = dbc.Pointer.DB(); err == nil {
-					db.SetMaxIdleConns(defaultMaxIdleConns)       // 设置连接池中空闲连接的最大数量
-					db.SetMaxOpenConns(defaultMaxOpenConns)       // 设置打开数据库连接的最大数量
-					db.SetConnMaxLifetime(defaultConnMaxLifetime) // 设置了连接可复用的最大时间
+			dbc.M.Lock()
+			if dbc.Done == 0 {
+				atomic.StoreUint32(&dbc.Done, 1)
+				if dbc.Pointer, err = gorm.Open(m.Dialector(mdt), cfg()); err == nil {
+					var db *sql.DB
+					if db, err = dbc.Pointer.DB(); err == nil {
+						db.SetMaxIdleConns(defaultMaxIdleConns)
+						db.SetMaxOpenConns(defaultMaxOpenConns)
+						db.SetConnMaxLifetime(defaultConnMaxLifetime)
+					}
 				}
 			}
+			dbc.M.Unlock()
 		} else {
 			if dbc.Pointer == nil {
 				err = fmt.Errorf("new mysql %s is nil", mdt.Db)
@@ -46,9 +50,13 @@ func (m *Model) NewMysql(dbc *types.DBCollector, mdt *types.MysqlDialect, cfg fu
 			}
 		}
 		if err != nil {
-			atomic.StoreUint32(&dbc.Done, 0)
 			if i < retryMaxTimes {
 				time.Sleep(retrySleepTime)
+				dbc.M.Lock()
+				if dbc.Done == 1 {
+					atomic.StoreUint32(&dbc.Done, 0)
+				}
+				dbc.M.Unlock()
 				continue
 			} else {
 				return nil, fmt.Errorf("new mysql %s error: %v", mdt.Db, err)
