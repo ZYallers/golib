@@ -6,7 +6,6 @@ import (
 	"github.com/ZYallers/golib/types"
 	"github.com/spf13/cast"
 	"gorm.io/gorm"
-	"sync/atomic"
 	"time"
 )
 
@@ -26,37 +25,34 @@ type Model struct {
 
 func (m *Model) NewMysql(dbc *types.DBCollector, mdt *types.MysqlDialect, cfg func() *gorm.Config, opts ...interface{}) (*gorm.DB, error) {
 	var err error
-	for i := 1; i <= retryMaxTimes; i++ {
-		if atomic.LoadUint32(&dbc.Done) == 0 {
-			dbc.M.Lock()
-			if dbc.Done == 0 {
-				if dbc.Pointer, err = gorm.Open(m.Dialector(mdt), cfg()); err == nil {
-					var db *sql.DB
-					if db, err = dbc.Pointer.DB(); err == nil {
-						ol, maxIdle, maxOpen := len(opts), defaultMaxIdleConns, defaultMaxOpenConns
-						maxIdleTime, maxLifeTime := defaultConnMaxIdleTime, defaultConnMaxLifetime
-						if ol > 0 {
-							maxIdle = cast.ToInt(opts[0])
-						}
-						if ol > 1 {
-							maxOpen = cast.ToInt(opts[1])
-						}
-						if ol > 2 {
-							maxIdleTime = cast.ToDuration(opts[2])
-						}
-						if ol > 3 {
-							maxLifeTime = cast.ToDuration(opts[3])
-						}
-						db.SetMaxIdleConns(maxIdle)
-						db.SetMaxOpenConns(maxOpen)
-						db.SetConnMaxIdleTime(maxIdleTime)
-						db.SetConnMaxLifetime(maxLifeTime)
+	for times := 1; times <= retryMaxTimes; times++ {
+		dbc.Once(func() {
+			if dbc.Pointer, err = gorm.Open(m.Dialector(mdt), cfg()); err == nil {
+				var db *sql.DB
+				if db, err = dbc.Pointer.DB(); err == nil {
+					ol, maxIdle, maxOpen := len(opts), defaultMaxIdleConns, defaultMaxOpenConns
+					maxIdleTime, maxLifeTime := defaultConnMaxIdleTime, defaultConnMaxLifetime
+					if ol > 0 {
+						maxIdle = cast.ToInt(opts[0])
 					}
+					if ol > 1 {
+						maxOpen = cast.ToInt(opts[1])
+					}
+					if ol > 2 {
+						maxIdleTime = cast.ToDuration(opts[2])
+					}
+					if ol > 3 {
+						maxLifeTime = cast.ToDuration(opts[3])
+					}
+					db.SetMaxIdleConns(maxIdle)
+					db.SetMaxOpenConns(maxOpen)
+					db.SetConnMaxIdleTime(maxIdleTime)
+					db.SetConnMaxLifetime(maxLifeTime)
 				}
-				atomic.StoreUint32(&dbc.Done, 1)
 			}
-			dbc.M.Unlock()
-		} else {
+		})
+
+		if err == nil {
 			if dbc.Pointer == nil {
 				err = fmt.Errorf("new mysql %s is nil", mdt.Db)
 			} else {
@@ -66,19 +62,16 @@ func (m *Model) NewMysql(dbc *types.DBCollector, mdt *types.MysqlDialect, cfg fu
 				}
 			}
 		}
+
 		if err != nil {
-			if i < retryMaxTimes {
-				dbc.M.Lock()
-				if dbc.Done == 1 {
-					time.Sleep(retrySleepTime)
-					atomic.StoreUint32(&dbc.Done, 0)
-				}
-				dbc.M.Unlock()
+			if times < retryMaxTimes {
+				dbc.Reset(func() { time.Sleep(retrySleepTime) })
 				continue
 			} else {
 				return nil, fmt.Errorf("new mysql %s error: %v", mdt.Db, err)
 			}
 		}
+
 		break
 	}
 	return dbc.Pointer, nil
