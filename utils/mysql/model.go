@@ -11,11 +11,11 @@ import (
 
 const (
 	retryMaxTimes          = 3
-	retrySleepTime         = 100 * time.Millisecond
+	retrySleepTime         = time.Second
 	defaultMaxIdleConns    = 5
 	defaultMaxOpenConns    = 50
-	defaultConnMaxIdleTime = 3 * time.Minute
-	defaultConnMaxLifetime = 5 * time.Minute
+	defaultConnMaxIdleTime = 5 * time.Minute
+	defaultConnMaxLifetime = 10 * time.Minute
 )
 
 type Model struct {
@@ -23,56 +23,55 @@ type Model struct {
 	DB    func() *gorm.DB
 }
 
-func (m *Model) NewMysql(dbc *types.DBCollector, mdt *types.MysqlDialect, cfg func() *gorm.Config, opts ...interface{}) (*gorm.DB, error) {
-	var err error
-	for times := 1; times <= retryMaxTimes; times++ {
+func (m *Model) NewMysql(dbc *types.DBCollector, mdt *types.MysqlDialect, f func() *gorm.Config, opts ...interface{}) (*gorm.DB, error) {
+	var newErr error
+	for i := 0; i < retryMaxTimes; i++ {
 		dbc.Once(func() {
-			if dbc.Pointer, err = gorm.Open(m.Dialector(mdt), cfg()); err == nil {
-				var db *sql.DB
-				if db, err = dbc.Pointer.DB(); err == nil {
-					ol, maxIdle, maxOpen := len(opts), defaultMaxIdleConns, defaultMaxOpenConns
-					maxIdleTime, maxLifeTime := defaultConnMaxIdleTime, defaultConnMaxLifetime
-					if ol > 0 {
-						maxIdle = cast.ToInt(opts[0])
-					}
-					if ol > 1 {
-						maxOpen = cast.ToInt(opts[1])
-					}
-					if ol > 2 {
-						maxIdleTime = cast.ToDuration(opts[2])
-					}
-					if ol > 3 {
-						maxLifeTime = cast.ToDuration(opts[3])
-					}
-					db.SetMaxIdleConns(maxIdle)
-					db.SetMaxOpenConns(maxOpen)
-					db.SetConnMaxIdleTime(maxIdleTime)
-					db.SetConnMaxLifetime(maxLifeTime)
-				}
+			cfg := f()
+			cfg.DisableAutomaticPing = true
+			if dbc.Pointer, newErr = gorm.Open(m.Dialector(mdt), cfg); newErr != nil {
+				return
 			}
+			var db *sql.DB
+			if db, newErr = dbc.Pointer.DB(); newErr != nil {
+				return
+			}
+			ol, maxIdle, maxOpen := len(opts), defaultMaxIdleConns, defaultMaxOpenConns
+			maxIdleTime, maxLifeTime := defaultConnMaxIdleTime, defaultConnMaxLifetime
+			if ol > 0 {
+				maxIdle = cast.ToInt(opts[0])
+			}
+			if ol > 1 {
+				maxOpen = cast.ToInt(opts[1])
+			}
+			if ol > 2 {
+				maxIdleTime = cast.ToDuration(opts[2])
+			}
+			if ol > 3 {
+				maxLifeTime = cast.ToDuration(opts[3])
+			}
+			db.SetMaxIdleConns(maxIdle)
+			db.SetMaxOpenConns(maxOpen)
+			db.SetConnMaxIdleTime(maxIdleTime)
+			db.SetConnMaxLifetime(maxLifeTime)
 		})
 
-		if err == nil {
+		if newErr == nil {
 			if dbc.Pointer == nil {
-				err = fmt.Errorf("new mysql %s is nil", mdt.Db)
+				newErr = fmt.Errorf("new mysql %s is nil", mdt.Db)
 			} else {
 				var db *sql.DB
-				if db, err = dbc.Pointer.DB(); err == nil {
-					err = db.Ping()
+				if db, newErr = dbc.Pointer.DB(); newErr == nil {
+					newErr = db.Ping()
 				}
 			}
 		}
 
-		if err != nil {
-			if times < retryMaxTimes {
-				dbc.Reset(func() { time.Sleep(retrySleepTime) })
-				continue
-			} else {
-				return nil, fmt.Errorf("new mysql %s error: %v", mdt.Db, err)
-			}
+		if newErr != nil {
+			dbc.Reset(func() { time.Sleep(retrySleepTime) })
+		} else {
+			break
 		}
-
-		break
 	}
-	return dbc.Pointer, nil
+	return dbc.Pointer, newErr
 }

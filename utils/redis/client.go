@@ -9,20 +9,20 @@ import (
 
 const (
 	retryMaxTimes  = 3
-	retrySleepTime = 100 * time.Millisecond
+	retrySleepTime = time.Second
 )
 
 type Redis struct {
 	Client func() *redis.Client
 }
 
-func (r *Redis) NewRedis(rdc *types.RedisCollector, cli *types.RedisClient, options func() *redis.Options) (*redis.Client, error) {
-	var err error
-	for times := 1; times <= retryMaxTimes; times++ {
+func (r *Redis) NewRedis(rdc *types.RedisCollector, cli *types.RedisClient, f func() *redis.Options) (*redis.Client, error) {
+	var newErr error
+	for i := 0; i < retryMaxTimes; i++ {
 		rdc.Once(func() {
 			opts := &redis.Options{}
-			if options != nil {
-				opts = options()
+			if f != nil {
+				opts = f()
 			}
 			opts.Addr = cli.Host + ":" + cli.Port
 			opts.Password = cli.Pwd
@@ -31,21 +31,16 @@ func (r *Redis) NewRedis(rdc *types.RedisCollector, cli *types.RedisClient, opti
 		})
 
 		if rdc.Pointer == nil {
-			err = fmt.Errorf("new redis(%s:%s) is nil", cli.Host, cli.Port)
+			newErr = fmt.Errorf("new redis(%s:%s) is nil", cli.Host, cli.Port)
 		} else {
-			err = rdc.Pointer.Ping().Err()
+			newErr = rdc.Pointer.Ping().Err()
 		}
 
-		if err != nil {
-			if times < retryMaxTimes {
-				rdc.Reset(func() { time.Sleep(retrySleepTime) })
-				continue
-			} else {
-				return nil, fmt.Errorf("new redis(%s:%s) error: %v", cli.Host, cli.Port, err)
-			}
+		if newErr != nil {
+			rdc.Reset(func() { time.Sleep(retrySleepTime) })
+		} else {
+			break
 		}
-
-		break
 	}
-	return rdc.Pointer, nil
+	return rdc.Pointer, newErr
 }
