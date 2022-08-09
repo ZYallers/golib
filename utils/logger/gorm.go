@@ -2,9 +2,11 @@ package logger
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/spf13/cast"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 	gormLogger "gorm.io/gorm/logger"
 	"regexp"
 	"runtime"
@@ -14,12 +16,12 @@ import (
 
 const (
 	regular      = "/(service|model|logic)/"
-	infoStr      = "%s\n[info] "
-	warnStr      = "%s\n[warn] "
-	errStr       = "%s\n[error] "
-	traceStr     = "%s\n[runtime:%.3fms] [rows:%v]\n%s"
-	traceWarnStr = "%s\n%s\n[runtime:%.3fms] [rows:%v]\n%s"
-	traceErrStr  = "%s\n%s\n[runtime:%.3fms] [rows:%v]\n%s"
+	infoStr      = "INFO: \n%s\n[info] "
+	warnStr      = "WARN: \n%s\n[warn] "
+	errStr       = "ERR: \n%s\n[error] "
+	traceStr     = "INFO: \n%s\n[time:%.3fms] [rows:%v]\n%s"
+	traceWarnStr = "WARN: \n%s\n%s\n[time:%.3fms] [rows:%v]\n%s"
+	traceErrStr  = "ERR: \n%s\n%s\n[time:%.3fms] [rows:%v]\n%s"
 )
 
 type GormLogSender interface {
@@ -29,10 +31,10 @@ type GormLogSender interface {
 }
 
 type logger struct {
-	GormLogSender
-	gormLogger.Config
-	Writer                                                        *zap.Logger
 	infoStr, warnStr, errStr, traceStr, traceErrStr, traceWarnStr string
+	Writer                                                        *zap.Logger
+	gormLogger.Config
+	GormLogSender
 }
 
 func NewGormLogger(name string, slowThreshold time.Duration, level gormLogger.LogLevel, sender GormLogSender) gormLogger.Interface {
@@ -84,19 +86,19 @@ func (l logger) Printf(level gormLogger.LogLevel, format string, v ...interface{
 
 func (l logger) Info(ctx context.Context, msg string, data ...interface{}) {
 	if l.LogLevel >= gormLogger.Info {
-		l.Printf(gormLogger.Info, l.infoStr+msg, append([]interface{}{fileWithLine()}, data...)...)
+		l.Printf(gormLogger.Info, l.infoStr+msg, append([]interface{}{fileWithLineNum()}, data...)...)
 	}
 }
 
 func (l logger) Warn(ctx context.Context, msg string, data ...interface{}) {
 	if l.LogLevel >= gormLogger.Warn {
-		l.Printf(gormLogger.Warn, l.warnStr+msg, append([]interface{}{fileWithLine()}, data...)...)
+		l.Printf(gormLogger.Warn, l.warnStr+msg, append([]interface{}{fileWithLineNum()}, data...)...)
 	}
 }
 
 func (l logger) Error(ctx context.Context, msg string, data ...interface{}) {
 	if l.LogLevel >= gormLogger.Error {
-		l.Printf(gormLogger.Error, l.errStr+msg, append([]interface{}{fileWithLine()}, data...)...)
+		l.Printf(gormLogger.Error, l.errStr+msg, append([]interface{}{fileWithLineNum()}, data...)...)
 	}
 }
 
@@ -106,31 +108,23 @@ func (l logger) Trace(ctx context.Context, begin time.Time, fc func() (string, i
 		switch {
 		case err != nil && l.LogLevel >= gormLogger.Error:
 			sql, rows := fc()
-			if rows == -1 {
-				l.Printf(gormLogger.Error, l.traceErrStr, fileWithLine(), err, float64(elapsed.Nanoseconds())/1e6, "-", sql)
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				l.Printf(gormLogger.Info, l.traceStr, fileWithLineNum(), float64(elapsed.Nanoseconds())/1e6, rows, sql)
 			} else {
-				l.Printf(gormLogger.Error, l.traceErrStr, fileWithLine(), err, float64(elapsed.Nanoseconds())/1e6, rows, sql)
+				l.Printf(gormLogger.Error, l.traceErrStr, fileWithLineNum(), err, float64(elapsed.Nanoseconds())/1e6, rows, sql)
 			}
 		case elapsed > l.SlowThreshold && l.SlowThreshold != 0 && l.LogLevel >= gormLogger.Warn:
 			sql, rows := fc()
 			slowLog := fmt.Sprintf("SLOW SQL >= %v", l.SlowThreshold)
-			if rows == -1 {
-				l.Printf(gormLogger.Warn, l.traceWarnStr, slowLog, fileWithLine(), float64(elapsed.Nanoseconds())/1e6, "-", sql)
-			} else {
-				l.Printf(gormLogger.Warn, l.traceWarnStr, slowLog, fileWithLine(), float64(elapsed.Nanoseconds())/1e6, rows, sql)
-			}
+			l.Printf(gormLogger.Warn, l.traceWarnStr, slowLog, fileWithLineNum(), float64(elapsed.Nanoseconds())/1e6, rows, sql)
 		case l.LogLevel >= gormLogger.Info:
 			sql, rows := fc()
-			if rows == -1 {
-				l.Printf(gormLogger.Info, l.traceStr, fileWithLine(), float64(elapsed.Nanoseconds())/1e6, "-", sql)
-			} else {
-				l.Printf(gormLogger.Info, l.traceStr, fileWithLine(), float64(elapsed.Nanoseconds())/1e6, rows, sql)
-			}
+			l.Printf(gormLogger.Info, l.traceStr, fileWithLineNum(), float64(elapsed.Nanoseconds())/1e6, rows, sql)
 		}
 	}
 }
 
-func fileWithLine() string {
+func fileWithLineNum() string {
 	for i := 2; i < 15; i++ {
 		_, file, line, ok := runtime.Caller(i)
 		if ok && strings.HasSuffix(file, ".go") && regexp.MustCompile(regular).MatchString(file) {
