@@ -1,12 +1,41 @@
 package types
 
-import "gorm.io/gorm"
+import (
+	"gorm.io/gorm"
+	"sync"
+	"sync/atomic"
+)
 
 type MysqlDialect struct {
 	User, Pwd, Host, Port, Db, Charset, Loc, ParseTime, MaxAllowedPacket, Timeout string
 }
 
 type DBCollector struct {
-	Done    uint32
+	done    uint32
+	m       sync.Mutex
 	Pointer *gorm.DB
+}
+
+func (d *DBCollector) Once(f func()) {
+	if atomic.LoadUint32(&d.done) == 0 {
+		d.doSlow(f)
+	}
+}
+
+func (d *DBCollector) Reset(f func()) {
+	d.m.Lock()
+	defer d.m.Unlock()
+	if d.done == 1 {
+		defer atomic.StoreUint32(&d.done, 0)
+		f()
+	}
+}
+
+func (d *DBCollector) doSlow(f func()) {
+	d.m.Lock()
+	defer d.m.Unlock()
+	if d.done == 0 {
+		defer atomic.StoreUint32(&d.done, 1)
+		f()
+	}
 }

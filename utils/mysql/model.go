@@ -5,16 +5,16 @@ import (
 	"fmt"
 	"github.com/ZYallers/golib/types"
 	"gorm.io/gorm"
-	"sync/atomic"
 	"time"
 )
 
 const (
 	retryMaxTimes          = 3
-	retrySleepTime         = 100 * time.Millisecond
-	defaultMaxIdleConns    = 25
+	retrySleepTime         = time.Second
+	defaultMaxIdleConns    = 5
 	defaultMaxOpenConns    = 50
-	defaultConnMaxLifetime = 5 * time.Minute
+	defaultConnMaxIdleTime = 5 * time.Minute
+	defaultConnMaxLifetime = 10 * time.Minute
 )
 
 type Model struct {
@@ -22,39 +22,55 @@ type Model struct {
 	DB    func() *gorm.DB
 }
 
-func (m *Model) NewMysql(dbc *types.DBCollector, mdt *types.MysqlDialect, cfg func() *gorm.Config) (*gorm.DB, error) {
-	var err error
-	for i := 1; i <= retryMaxTimes; i++ {
-		if atomic.LoadUint32(&dbc.Done) == 0 {
-			atomic.StoreUint32(&dbc.Done, 1)
-			if dbc.Pointer, err = gorm.Open(m.Dialector(mdt), cfg()); err == nil {
-				var db *sql.DB
-				if db, err = dbc.Pointer.DB(); err == nil {
-					db.SetMaxIdleConns(defaultMaxIdleConns)       // 设置连接池中空闲连接的最大数量
-					db.SetMaxOpenConns(defaultMaxOpenConns)       // 设置打开数据库连接的最大数量
-					db.SetConnMaxLifetime(defaultConnMaxLifetime) // 设置了连接可复用的最大时间
-				}
+func (m *Model) NewMysql(dbc *types.DBCollector, mdt *types.MysqlDialect, f func() *gorm.Config, opts ...interface{}) (*gorm.DB, error) {
+	var newErr error
+	for i := 0; i < retryMaxTimes; i++ {
+		dbc.Once(func() {
+			cfg := f()
+			cfg.DisableAutomaticPing = true
+			if dbc.Pointer, newErr = gorm.Open(m.Dialector(mdt), cfg); newErr != nil {
+				return
 			}
-		} else {
+			var db *sql.DB
+			if db, newErr = dbc.Pointer.DB(); newErr != nil {
+				return
+			}
+			ol, maxIdle, maxOpen := len(opts), defaultMaxIdleConns, defaultMaxOpenConns
+			maxIdleTime, maxLifeTime := defaultConnMaxIdleTime, defaultConnMaxLifetime
+			if ol > 0 {
+				maxIdle = opts[0].(int)
+			}
+			if ol > 1 {
+				maxOpen = opts[1].(int)
+			}
+			if ol > 2 {
+				maxIdleTime = opts[2].(time.Duration)
+			}
+			if ol > 3 {
+				maxLifeTime = opts[3].(time.Duration)
+			}
+			db.SetMaxIdleConns(maxIdle)
+			db.SetMaxOpenConns(maxOpen)
+			db.SetConnMaxIdleTime(maxIdleTime)
+			db.SetConnMaxLifetime(maxLifeTime)
+		})
+
+		if newErr == nil {
 			if dbc.Pointer == nil {
-				err = fmt.Errorf("new mysql %s is nil", mdt.Db)
+				newErr = fmt.Errorf("new mysql %s is nil", mdt.Db)
 			} else {
 				var db *sql.DB
-				if db, err = dbc.Pointer.DB(); err == nil {
-					err = db.Ping()
+				if db, newErr = dbc.Pointer.DB(); newErr == nil {
+					newErr = db.Ping()
 				}
 			}
 		}
-		if err != nil {
-			atomic.StoreUint32(&dbc.Done, 0)
-			if i < retryMaxTimes {
-				time.Sleep(retrySleepTime)
-				continue
-			} else {
-				return nil, fmt.Errorf("new mysql %s error: %v", mdt.Db, err)
-			}
+
+		if newErr != nil {
+			dbc.Reset(func() { time.Sleep(retrySleepTime) })
+		} else {
+			break
 		}
-		break
 	}
-	return dbc.Pointer, nil
+	return dbc.Pointer, newErr
 }
