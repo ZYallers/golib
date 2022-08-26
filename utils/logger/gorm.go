@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/spf13/cast"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 	gormLogger "gorm.io/gorm/logger"
@@ -128,7 +127,7 @@ func fileWithLineNum() string {
 	for i := 2; i < 15; i++ {
 		_, file, line, ok := runtime.Caller(i)
 		if ok && strings.HasSuffix(file, ".go") && regexp.MustCompile(regular).MatchString(file) {
-			return file + ":" + cast.ToString(line)
+			return fmt.Sprintf("%s:%d", file, line)
 		}
 	}
 	return ""

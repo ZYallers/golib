@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/ZYallers/golib/types"
-	"github.com/spf13/cast"
 	"gorm.io/gorm"
 	"time"
 )
@@ -39,16 +38,16 @@ func (m *Model) NewMysql(dbc *types.DBCollector, mdt *types.MysqlDialect, f func
 			ol, maxIdle, maxOpen := len(opts), defaultMaxIdleConns, defaultMaxOpenConns
 			maxIdleTime, maxLifeTime := defaultConnMaxIdleTime, defaultConnMaxLifetime
 			if ol > 0 {
-				maxIdle = cast.ToInt(opts[0])
+				maxIdle = opts[0].(int)
 			}
 			if ol > 1 {
-				maxOpen = cast.ToInt(opts[1])
+				maxOpen = opts[1].(int)
 			}
 			if ol > 2 {
-				maxIdleTime = cast.ToDuration(opts[2])
+				maxIdleTime = opts[2].(time.Duration)
 			}
 			if ol > 3 {
-				maxLifeTime = cast.ToDuration(opts[3])
+				maxLifeTime = opts[3].(time.Duration)
 			}
 			db.SetMaxIdleConns(maxIdle)
 			db.SetMaxOpenConns(maxOpen)
