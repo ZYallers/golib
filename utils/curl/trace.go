@@ -27,22 +27,6 @@ LocalAddr         : %s
 RemoteAddr        : %s`
 )
 
-// String return the details of trace information.
-func (t TraceInfo) String() string {
-	var localAddr, remoteAddr string
-	if t.LocalAddr != nil {
-		localAddr = t.LocalAddr.String()
-	}
-	if t.RemoteAddr != nil {
-		remoteAddr = t.RemoteAddr.String()
-	}
-	if t.IsConnReused {
-		return fmt.Sprintf(traceReusedFmt, t.TotalTime, t.FirstResponseTime, t.ResponseTime, localAddr, remoteAddr)
-	}
-	return fmt.Sprintf(traceFmt, t.TotalTime, t.DNSLookupTime, t.TCPConnectTime, t.TLSHandshakeTime,
-		t.FirstResponseTime, t.ResponseTime, localAddr, remoteAddr)
-}
-
 // TraceInfo represents the trace information.
 type TraceInfo struct {
 	// DNSLookupTime is a duration that transport took to perform
@@ -86,6 +70,22 @@ type TraceInfo struct {
 
 	// RemoteAddr returns the remote network address.
 	RemoteAddr net.Addr
+}
+
+// String return the details of trace information.
+func (t TraceInfo) String() string {
+	var localAddr, remoteAddr string
+	if t.LocalAddr != nil {
+		localAddr = t.LocalAddr.String()
+	}
+	if t.RemoteAddr != nil {
+		remoteAddr = t.RemoteAddr.String()
+	}
+	if t.IsConnReused {
+		return fmt.Sprintf(traceReusedFmt, t.TotalTime, t.FirstResponseTime, t.ResponseTime, localAddr, remoteAddr)
+	}
+	return fmt.Sprintf(traceFmt, t.TotalTime, t.DNSLookupTime, t.TCPConnectTime, t.TLSHandshakeTime,
+		t.FirstResponseTime, t.ResponseTime, localAddr, remoteAddr)
 }
 
 type clientTrace struct {
