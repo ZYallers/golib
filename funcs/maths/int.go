@@ -6,6 +6,5 @@ import (
 )
 
 func RandIntn(max int) int {
-	rad := rand.New(rand.NewSource(time.Now().Unix()))
-	return rad.Intn(max)
+	return rand.New(rand.NewSource(time.Now().UnixNano())).Intn(max)
 }
