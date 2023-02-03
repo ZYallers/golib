@@ -237,8 +237,9 @@ func (r *Request) Send() (*Response, error) {
 	}
 
 	if r.Body != nil {
-		var backup io.Reader
-		if backup, r.Body, r.error = r.copyBody(); r.error != nil {
+		backup := r.Body
+		backup, r.Body, r.error = libIo.DrainBody(io.NopCloser(r.Body))
+		if r.error != nil {
 			return r.Response, r.error
 		}
 		defer func() { r.Body = backup }()
@@ -284,16 +285,6 @@ func (r *Request) Send() (*Response, error) {
 	}
 
 	return r.Response, r.error
-}
-
-func (r *Request) copyBody() (io.Reader, io.Reader, error) {
-	if cp, err := libIo.Copy(r.Body); err != nil {
-		return nil, r.Body, err
-	} else {
-		var bf bytes.Buffer
-		_, _ = bf.Write(cp)
-		return &bf, bytes.NewReader(cp), nil
-	}
 }
 
 // TraceInfo returns the trace information, only available if trace is enabled
@@ -401,13 +392,13 @@ func (r *Request) DumpRequest() string {
 	_ = req.Header.WriteSubset(&buf, reqWriteExcludeHeaderDump)
 
 	if r.Body != nil {
-		var backup io.Reader
 		var err error
-		if backup, r.Body, err = r.copyBody(); err == nil {
+		backup := r.Body
+		if backup, r.Body, err = libIo.DrainBody(io.NopCloser(r.Body)); err == nil {
+			defer func() { r.Body = backup }()
 			if bte, err := libIo.Copy(r.Body); err == nil {
 				_, _ = fmt.Fprintf(&buf, "\r\n%s\r\n", string(bte))
 			}
-			defer func() { r.Body = backup }()
 		}
 	}
 
