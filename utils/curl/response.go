@@ -27,6 +27,14 @@ func (r *Response) Status() string {
 	return r.Raw.Status
 }
 
+// Proto returns the response proto.
+func (r *Response) Proto() string {
+	if r.Raw == nil {
+		return ""
+	}
+	return r.Raw.Proto
+}
+
 // StatusCode returns the response status code.
 func (r *Response) StatusCode() int {
 	if r.Raw == nil {

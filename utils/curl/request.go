@@ -107,10 +107,10 @@ func (r *Request) SetPostData(data map[string]interface{}) *Request {
 	r.PostData = data
 
 	if ct, ok := r.Headers["Content-Type"]; ok && strings.HasPrefix(ct, JsonContentType) {
-		if b, err := json.Marshal(r.PostData); err != nil {
+		if postDataBytes, err := json.Marshal(r.PostData); err != nil {
 			r.error = err
 		} else {
-			r.Body = bytes.NewReader(b)
+			r.Body = bytes.NewReader(postDataBytes)
 		}
 		return r
 	}
@@ -237,12 +237,13 @@ func (r *Request) Send() (*Response, error) {
 	}
 
 	if r.Body != nil {
-		backup := r.Body
-		backup, r.Body, r.error = libIo.DrainBody(io.NopCloser(r.Body))
-		if r.error != nil {
+		if bodyBytes, err := libIo.Copy(r.Body); err != nil {
+			r.error = err
 			return r.Response, r.error
+		} else {
+			defer func() { r.Body = bytes.NewReader(bodyBytes) }()
+			r.Body = bytes.NewReader(bodyBytes)
 		}
-		defer func() { r.Body = backup }()
 	}
 
 	if r.rawRequest, r.error = http.NewRequestWithContext(r.ctx, r.Method, r.Url, r.Body); r.error != nil {
@@ -358,27 +359,14 @@ func (r *Request) TraceInfo() TraceInfo {
 	return ti
 }
 
-var reqWriteExcludeHeaderDump = map[string]bool{
-	"Host":              true, // not in Header map anyway
-	"Transfer-Encoding": true,
-	"Trailer":           true,
-}
-
 func (r *Request) DumpRequest() string {
 	var buf bytes.Buffer
 
 	req := r.rawRequest
-	reqURL, reqMethod := "", req.Method
+	_, _ = fmt.Fprintf(&buf, "Proto: %s\r\nMethod: %s\r\n", req.Proto, req.Method)
 	if req.URL != nil {
-		reqURL = req.URL.String()
-	}
-	if reqMethod == "" {
-		reqMethod = http.MethodGet
-	}
-	_, _ = fmt.Fprintf(&buf, "%s %s %s\r\n", reqMethod, reqURL, req.Proto)
-
-	if req.URL != nil && req.URL.Host != "" {
-		_, _ = fmt.Fprintf(&buf, "Host: %s\r\n", req.URL.Host)
+		_, _ = fmt.Fprintf(&buf, "Scheme: %s\r\nHost: %s\r\nPath: %s\r\nQuery: %s\r\nURL: %s\r\n",
+			req.URL.Scheme, req.URL.Host, req.URL.Path, req.URL.RawQuery, req.URL.String())
 	}
 
 	if len(req.TransferEncoding) > 0 {
@@ -389,16 +377,12 @@ func (r *Request) DumpRequest() string {
 		_, _ = fmt.Fprintf(&buf, "Connection: close\r\n")
 	}
 
-	_ = req.Header.WriteSubset(&buf, reqWriteExcludeHeaderDump)
+	_ = req.Header.WriteSubset(&buf, map[string]bool{"Host": true, "Transfer-Encoding": true, "Trailer": true})
 
 	if r.Body != nil {
-		var err error
-		backup := r.Body
-		if backup, r.Body, err = libIo.DrainBody(io.NopCloser(r.Body)); err == nil {
-			defer func() { r.Body = backup }()
-			if bte, err := libIo.Copy(r.Body); err == nil {
-				_, _ = fmt.Fprintf(&buf, "\r\n%s\r\n", string(bte))
-			}
+		if bodyBytes, err := libIo.Copy(r.Body); err == nil {
+			defer func() { r.Body = bytes.NewReader(bodyBytes) }()
+			_, _ = fmt.Fprintf(&buf, "\r\n%s\r\n", string(bodyBytes))
 		}
 	}
 
@@ -406,16 +390,19 @@ func (r *Request) DumpRequest() string {
 }
 
 func (r *Request) DumpResponse() string {
-	var b bytes.Buffer
+	var buf bytes.Buffer
 	if r.Response != nil {
+		_, _ = io.WriteString(&buf, fmt.Sprintf("Proto: %s\r\n", r.Response.Proto()))
+		_, _ = io.WriteString(&buf, fmt.Sprintf("Status: %s\r\n", r.Response.Status()))
+		_, _ = io.WriteString(&buf, fmt.Sprintf("StatusCode: %d\r\n", r.Response.StatusCode()))
 		if h := r.Response.HeaderToString(); h != "" {
-			_, _ = io.WriteString(&b, h)
+			_, _ = io.WriteString(&buf, h)
 		}
 		if body := r.Response.Body; body != "" {
-			_, _ = io.WriteString(&b, "\r\n"+body)
+			_, _ = io.WriteString(&buf, "\r\n"+body)
 		}
 	}
-	return b.String()
+	return buf.String()
 }
 
 func (r *Request) DumpAll() string {
