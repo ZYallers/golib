@@ -19,11 +19,7 @@ func TestRequest_Get(t *testing.T) {
 		t.Error(err)
 	}
 
-	fmt.Println("ResponseTotalTime", resp.TotalTime())
-	fmt.Print("\r\n")
-
-	//fmt.Println("resp.Body")
-	//fmt.Println(resp.Body)
+	fmt.Println(resp.Body)
 
 	fmt.Print("\r\n")
 	fmt.Println(req.TraceInfo())
@@ -48,11 +44,7 @@ func TestRequest_Post(t *testing.T) {
 		t.Error(err)
 	}
 
-	fmt.Println("ResponseTotalTime", resp.TotalTime())
-	fmt.Print("\r\n")
-
-	//fmt.Println("resp.Body")
-	//fmt.Println(resp.Body)
+	fmt.Println(resp.Body)
 
 	fmt.Print("\r\n")
 	fmt.Println(req.TraceInfo())
