@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	libIo "github.com/ZYallers/golib/funcs/io"
-	"github.com/ZYallers/golib/utils/json"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	libIo "github.com/ZYallers/golib/funcs/io"
+	"github.com/ZYallers/golib/utils/json"
 )
 
 type Request struct {
@@ -28,6 +29,7 @@ type Request struct {
 	error              error
 	startTime          time.Time
 	responseReturnTime time.Time
+	body               string
 	ctx                context.Context
 	client             *http.Client
 	rawRequest         *http.Request
@@ -107,10 +109,10 @@ func (r *Request) SetPostData(data map[string]interface{}) *Request {
 	r.PostData = data
 
 	if ct, ok := r.Headers["Content-Type"]; ok && strings.HasPrefix(ct, JsonContentType) {
-		if postDataBytes, err := json.Marshal(r.PostData); err != nil {
+		if pb, err := json.Marshal(r.PostData); err != nil {
 			r.error = err
 		} else {
-			r.Body = bytes.NewReader(postDataBytes)
+			r.Body, r.body = bytes.NewReader(pb), string(pb)
 		}
 		return r
 	}
@@ -120,8 +122,8 @@ func (r *Request) SetPostData(data map[string]interface{}) *Request {
 	for k, v := range r.PostData {
 		posts.Set(k, fmt.Sprint(v))
 	}
-	r.Body = strings.NewReader(posts.Encode())
-
+	enc := posts.Encode()
+	r.Body, r.body = strings.NewReader(enc), enc
 	return r
 }
 
@@ -133,18 +135,28 @@ func (r *Request) SetBody(body interface{}) *Request {
 
 	switch b := body.(type) {
 	case io.ReadCloser:
-		r.Body = b
+		if cb, err := libIo.Copy(b); err == nil {
+			r.Body, r.body = bytes.NewReader(cb), string(cb)
+		}
 	case io.Reader:
-		r.Body = b
+		if cb, err := libIo.Copy(b); err == nil {
+			r.Body, r.body = bytes.NewReader(cb), string(cb)
+		}
 	case []byte:
-		r.Body = bytes.NewReader(b)
+		r.Body, r.body = bytes.NewReader(b), string(b)
 	case string:
-		r.Body = strings.NewReader(b)
+		r.Body, r.body = strings.NewReader(b), b
 	default:
-		r.Body = strings.NewReader(fmt.Sprint(body))
+		sb := fmt.Sprint(body)
+		r.Body, r.body = strings.NewReader(sb), sb
 	}
 
 	return r
+}
+
+// GetBody get the request set body
+func (r *Request) GetBody() string {
+	return r.body
 }
 
 // SetTimeOut set request timeout after
@@ -234,16 +246,6 @@ func (r *Request) Send() (*Response, error) {
 		var cancel context.CancelFunc
 		r.ctx, cancel = context.WithTimeout(r.ctx, r.Timeout)
 		defer cancel()
-	}
-
-	if r.Body != nil {
-		if bodyBytes, err := libIo.Copy(r.Body); err != nil {
-			r.error = err
-			return r.Response, r.error
-		} else {
-			defer func() { r.Body = bytes.NewReader(bodyBytes) }()
-			r.Body = bytes.NewReader(bodyBytes)
-		}
 	}
 
 	if r.rawRequest, r.error = http.NewRequestWithContext(r.ctx, r.Method, r.Url, r.Body); r.error != nil {
@@ -379,11 +381,8 @@ func (r *Request) DumpRequest() string {
 
 	_ = req.Header.WriteSubset(&buf, map[string]bool{"Host": true, "Transfer-Encoding": true, "Trailer": true})
 
-	if r.Body != nil {
-		if bodyBytes, err := libIo.Copy(r.Body); err == nil {
-			defer func() { r.Body = bytes.NewReader(bodyBytes) }()
-			_, _ = fmt.Fprintf(&buf, "\r\n%s\r\n", string(bodyBytes))
-		}
+	if r.body != "" {
+		_, _ = fmt.Fprintf(&buf, "\r\n%s\r\n", r.body)
 	}
 
 	return buf.String()
@@ -398,8 +397,8 @@ func (r *Request) DumpResponse() string {
 		if h := r.Response.HeaderToString(); h != "" {
 			_, _ = io.WriteString(&buf, h)
 		}
-		if body := r.Response.Body; body != "" {
-			_, _ = io.WriteString(&buf, "\r\n"+body)
+		if r.Response.Body != "" {
+			_, _ = io.WriteString(&buf, "\r\n"+r.Response.Body)
 		}
 	}
 	return buf.String()
