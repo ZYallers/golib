@@ -30,7 +30,6 @@ type Request struct {
 	startTime          time.Time
 	responseReturnTime time.Time
 	body               string
-	ctx                context.Context
 	client             *http.Client
 	rawRequest         *http.Request
 	trace              *clientTrace
@@ -38,9 +37,9 @@ type Request struct {
 
 // NewRequest new request
 func NewRequest(url string) *Request {
-	req := &Request{Url: url, client: Client, Response: &Response{}, Timeout: ClientTimeout}
-	req.Response.Request = req
-	return req
+	r := &Request{Url: url, client: Client, Timeout: ClientTimeout}
+	r.Response = &Response{Request: r}
+	return r
 }
 
 // SetMethod set request method
@@ -112,7 +111,7 @@ func (r *Request) SetPostData(data map[string]interface{}) *Request {
 		if pb, err := json.Marshal(r.PostData); err != nil {
 			r.error = err
 		} else {
-			r.Body, r.body = bytes.NewReader(pb), string(pb)
+			r.body = string(pb)
 		}
 		return r
 	}
@@ -122,33 +121,33 @@ func (r *Request) SetPostData(data map[string]interface{}) *Request {
 	for k, v := range r.PostData {
 		posts.Set(k, fmt.Sprint(v))
 	}
-	enc := posts.Encode()
-	r.Body, r.body = strings.NewReader(enc), enc
+	r.body = posts.Encode()
 	return r
 }
 
-// SetBody set the request Body, accepts string, []byte, io.Reader, io.ReadCloser.
+// SetBody set the request body, accepts string, []byte, bytes.Buffer, io.Reader, io.ReadCloser.
 func (r *Request) SetBody(body interface{}) *Request {
 	if body == nil {
 		return r
 	}
 
 	switch b := body.(type) {
-	case io.ReadCloser:
-		if cb, err := libIo.Copy(b); err == nil {
-			r.Body, r.body = bytes.NewReader(cb), string(cb)
-		}
+	case string:
+		r.body = b
+	case []byte:
+		r.body = string(b)
+	case bytes.Buffer:
+		r.body = b.String()
 	case io.Reader:
 		if cb, err := libIo.Copy(b); err == nil {
-			r.Body, r.body = bytes.NewReader(cb), string(cb)
+			r.body = string(cb)
 		}
-	case []byte:
-		r.Body, r.body = bytes.NewReader(b), string(b)
-	case string:
-		r.Body, r.body = strings.NewReader(b), b
+	case io.ReadCloser:
+		if cb, err := libIo.Copy(b); err == nil {
+			r.body = string(cb)
+		}
 	default:
-		sb := fmt.Sprint(body)
-		r.Body, r.body = strings.NewReader(sb), sb
+		r.body = fmt.Sprint(body)
 	}
 
 	return r
@@ -157,6 +156,11 @@ func (r *Request) SetBody(body interface{}) *Request {
 // GetBody get the request set body
 func (r *Request) GetBody() string {
 	return r.body
+}
+
+// GetError get the request handle process error
+func (r *Request) GetError() error {
+	return r.error
 }
 
 // SetTimeOut set request timeout after
@@ -171,17 +175,6 @@ func (r *Request) SetContentType(contentType string) *Request {
 		r.Headers = map[string]string{}
 	}
 	r.Headers["Content-Type"] = contentType
-	return r
-}
-
-// SetContext method sets the context.Context for current Request. It allows
-// to interrupt the request execution if ctx.Done() channel is closed.
-// See https://blog.golang.org/context article and the "context" package
-// documentation.
-func (r *Request) SetContext(ctx context.Context) *Request {
-	if ctx != nil {
-		r.ctx = ctx
-	}
 	return r
 }
 
@@ -200,9 +193,7 @@ func (r *Request) DisableCloseConn() *Request {
 
 // EnableTrace enables trace (http3 currently does not support trace).
 func (r *Request) EnableTrace() *Request {
-	if r.trace == nil {
-		r.trace = &clientTrace{}
-	}
+	r.trace = &clientTrace{}
 	return r
 }
 
@@ -226,29 +217,24 @@ func (r *Request) Post() (*Response, error) {
 func (r *Request) Send() (*Response, error) {
 	defer func() { r.responseReturnTime = time.Now() }()
 
-	if r.Response == nil {
-		r.Response = &Response{Request: r}
-	}
+	r.Response = &Response{Request: r}
 
-	if r.error != nil {
-		return r.Response, r.error
-	}
-
-	if r.ctx == nil {
-		r.ctx = context.Background()
-	}
-
+	ctx := context.Background()
 	if r.trace != nil {
-		r.ctx = r.trace.createContext(r.ctx)
+		ctx = r.trace.createContext(ctx)
 	}
-
 	if r.Timeout > 0 {
 		var cancel context.CancelFunc
-		r.ctx, cancel = context.WithTimeout(r.ctx, r.Timeout)
+		ctx, cancel = context.WithTimeout(ctx, r.Timeout)
 		defer cancel()
 	}
 
-	if r.rawRequest, r.error = http.NewRequestWithContext(r.ctx, r.Method, r.Url, r.Body); r.error != nil {
+	var body io.Reader
+	if r.body != "" {
+		body = strings.NewReader(r.body)
+	}
+
+	if r.rawRequest, r.error = http.NewRequestWithContext(ctx, r.Method, r.Url, body); r.error != nil {
 		return r.Response, r.error
 	}
 
