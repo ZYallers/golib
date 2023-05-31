@@ -11,18 +11,24 @@ import (
 )
 
 const (
-	// the maximum size in megabytes of the log file before it gets rotated. It defaults to 100 megabytes.
+	// The maximum size in megabytes of the log file before it gets rotated. It defaults to 100 megabytes.
 	maxSize = 100
-	// the maximum number of old log files to retain. The default is to retain all old log files (though MaxAge may still cause them to get deleted.
+
+	// The maximum number of old log files to retain.
+	// The default is to retain all old log files (though MaxAge may still cause them to get deleted.
 	maxBackups = 20
-	// the log files suffix.
+
+	// The maximum number of running caches, if exceeded, will trigger a deletion mechanism to free memory.
+	cacheMaxSize = 50
+
+	// The log files suffix.
 	suffix = ".log"
 )
 
 var (
 	loggerDir    string
 	loggerDict                        = safe.NewDict()
-	levelEnabler zap.LevelEnablerFunc = func(l zapcore.Level) bool { return l >= zapcore.DebugLevel }
+	levelEnabler zap.LevelEnablerFunc = func(lv zapcore.Level) bool { return lv >= zapcore.DebugLevel }
 	jsonEncoder                       = zapcore.NewJSONEncoder(zapcore.EncoderConfig{
 		TimeKey:        "ts",
 		LevelKey:       "level",
@@ -61,10 +67,24 @@ func Use(filename string) *zap.Logger {
 }
 
 func NewLogger(filename string) *zap.Logger {
-	logger, _ := loggerDict.GetOrPutFunc(filename, func(fn string) (interface{}, error) {
-		lumber := &lumberjack.Logger{MaxSize: maxSize, MaxBackups: maxBackups, LocalTime: true, Compress: false, Filename: fn}
-		logger := zap.New(zapcore.NewCore(jsonEncoder, zapcore.AddSync(lumber), levelEnabler))
+	v, ok := loggerDict.GetOrPutFunc(filename, func(fn string) (interface{}, error) {
+		lk := &lumberjack.Logger{MaxSize: maxSize, MaxBackups: maxBackups, LocalTime: true, Compress: false, Filename: fn}
+		logger := zap.New(zapcore.NewCore(jsonEncoder, zapcore.AddSync(lk), levelEnabler))
 		return logger, nil
 	})
-	return logger.(*zap.Logger)
+	if !ok && loggerDict.Len() >= cacheMaxSize {
+		// Exceeding maximum value, randomly delete half
+		counter, clean := 0, cacheMaxSize/2
+		for key, _ := range loggerDict.Data() {
+			if key == filename {
+				continue
+			}
+			if counter++; counter > clean {
+				break
+			}
+			loggerDict.Delete(key)
+		}
+	}
+	logger, _ := v.(*zap.Logger)
+	return logger
 }
