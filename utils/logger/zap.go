@@ -11,18 +11,9 @@ import (
 )
 
 const (
-	// The maximum size in megabytes of the log file before it gets rotated. It defaults to 100 megabytes.
-	maxSize = 100
-
-	// The maximum number of old log files to retain.
-	// The default is to retain all old log files (though MaxAge may still cause them to get deleted.
-	maxBackups = 20
-
-	// The maximum number of running caches, if exceeded, will trigger a deletion mechanism to free memory.
-	cacheMaxSize = 50
-
-	// The log files suffix.
-	suffix = ".log"
+	suffix              = "log"
+	cacheMaxSize        = 100
+	perTimeDeleteNumber = 10
 )
 
 var (
@@ -54,32 +45,38 @@ func GetLoggerDir() string {
 	return loggerDir
 }
 
-func Use(filename string) *zap.Logger {
-	fn, dir := filename, loggerDir
-	if fn == "" {
-		fn = time.Now().Format("20060102")
+func Use(f string, opts ...Option) *zap.Logger {
+	filename, dir := f, loggerDir
+	if filename == "" {
+		filename = time.Now().Format("20060102")
 	}
 	if dir == "" {
 		dir, _ = filepath.Abs(filepath.Dir("."))
 	}
-	fp, _ := filepath.Abs(dir + "/" + fn + suffix)
-	return NewLogger(fp)
+	fp, _ := filepath.Abs(dir + "/" + filename + "." + suffix)
+	return NewLogger(fp, opts...)
 }
 
-func NewLogger(filename string) *zap.Logger {
-	v, ok := loggerDict.GetOrPutFunc(filename, func(fn string) (interface{}, error) {
-		lk := &lumberjack.Logger{MaxSize: maxSize, MaxBackups: maxBackups, LocalTime: true, Compress: false, Filename: fn}
+func NewLogger(f string, opts ...Option) *zap.Logger {
+	v, exist := loggerDict.GetOrPutFunc(f, func(filename string) (interface{}, error) {
+		cfg := &defaultConfig
+		for _, opt := range opts {
+			opt(cfg)
+		}
+		//fmt.Printf("%+v\n", cfg)
+		lk := &lumberjack.Logger{Filename: filename, MaxSize: cfg.maxSize, MaxAge: cfg.maxAge,
+			MaxBackups: cfg.maxBackups, LocalTime: cfg.localTime, Compress: cfg.compress}
 		logger := zap.New(zapcore.NewCore(jsonEncoder, zapcore.AddSync(lk), levelEnabler))
 		return logger, nil
 	})
-	if !ok && loggerDict.Len() >= cacheMaxSize {
-		// Exceeding maximum value, randomly delete half
-		counter, clean := 0, cacheMaxSize/2
+	// Randomly delete ${perTimeDeleteNumber} cached logger after exceeding ${cacheMaxSize}
+	if !exist && loggerDict.Len() >= cacheMaxSize {
+		counter, delNum := 0, perTimeDeleteNumber
 		for key, _ := range loggerDict.Data() {
-			if key == filename {
+			if key == f {
 				continue
 			}
-			if counter++; counter > clean {
+			if counter++; counter > delNum {
 				break
 			}
 			loggerDict.Delete(key)
