@@ -4,29 +4,43 @@ import (
 	"go.uber.org/zap"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"sync"
 	"testing"
 	"time"
 )
 
-func Test_Zap_Use(t *testing.T) {
-	SetLoggerDir("./test_log")
-	Use("ddd").Info("1234")
+func TestSetLoggerDir(t *testing.T) {
+	SetLoggerDir(".")
+}
+
+func TestGetLoggerDir(t *testing.T) {
+	GetLoggerDir()
+}
+
+func TestUse(t *testing.T) {
+	SetLoggerDir(".")
+	Use("test").Debug("message")
+}
+
+func TestUse2(t *testing.T) {
+	SetLoggerDir("./test")
 	var wg sync.WaitGroup
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 105; i++ {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
 			is := strconv.Itoa(i)
-			Use("").Error(strings.Repeat(is, 5))
-			Use("eeee").Info(is, zap.Any("len", loggerDict.Len()))
+			Use(is).Debug(is, zap.Any("len", loggerDict.Len()))
 		}(i)
 	}
 	wg.Wait()
 }
 
-func Test_Zap_NewLogger(t *testing.T) {
+func TestNewLogger(t *testing.T) {
+	NewLogger("./test2.log").Debug("message")
+}
+
+func TestNewLogger2(t *testing.T) {
 	fileName := func(fn, dir string) string {
 		if fn == "" {
 			fn = time.Now().Format("20060102")
@@ -34,7 +48,7 @@ func Test_Zap_NewLogger(t *testing.T) {
 		if dir == "" {
 			dir, _ = filepath.Abs(filepath.Dir("."))
 		}
-		fp, _ := filepath.Abs(dir + "/" + fn + suffix)
+		fp, _ := filepath.Abs(dir + "/" + fn + ".log")
 		return fp
 	}
 	var wg sync.WaitGroup
@@ -43,7 +57,7 @@ func Test_Zap_NewLogger(t *testing.T) {
 		go func(i int) {
 			defer wg.Done()
 			is := strconv.Itoa(i)
-			NewLogger(fileName("test@"+is, "./test_log")).Info(is)
+			NewLogger(fileName("test@"+is, "./test")).Info(is)
 			NewLogger(fileName("record", "")).Debug(is, zap.Int("len", loggerDict.Len()))
 		}(i)
 	}

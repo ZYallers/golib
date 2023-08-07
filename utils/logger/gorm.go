@@ -4,13 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"go.uber.org/zap"
-	"gorm.io/gorm"
-	gormLogger "gorm.io/gorm/logger"
 	"regexp"
 	"runtime"
 	"strings"
 	"time"
+
+	"go.uber.org/zap"
+	"gorm.io/gorm"
+	ormLogger "gorm.io/gorm/logger"
 )
 
 const (
@@ -29,18 +30,18 @@ type GormLogSender interface {
 	Always() bool
 }
 
-type logger struct {
+type gormLogger struct {
 	infoStr, warnStr, errStr, traceStr, traceErrStr, traceWarnStr string
 	Writer                                                        *zap.Logger
-	gormLogger.Config
+	ormLogger.Config
 	GormLogSender
 }
 
-func NewGormLogger(name string, slowThreshold time.Duration, level gormLogger.LogLevel, sender GormLogSender) gormLogger.Interface {
-	return &logger{
+func NewGormLogger(name string, slowThreshold time.Duration, level ormLogger.LogLevel, sender GormLogSender) ormLogger.Interface {
+	return &gormLogger{
 		GormLogSender: sender,
 		Writer:        Use(name),
-		Config:        gormLogger.Config{SlowThreshold: slowThreshold, LogLevel: level, Colorful: false},
+		Config:        ormLogger.Config{SlowThreshold: slowThreshold, LogLevel: level, Colorful: false},
 		infoStr:       infoStr,
 		warnStr:       warnStr,
 		errStr:        errStr,
@@ -50,23 +51,23 @@ func NewGormLogger(name string, slowThreshold time.Duration, level gormLogger.Lo
 	}
 }
 
-func (l *logger) LogMode(level gormLogger.LogLevel) gormLogger.Interface {
+func (l *gormLogger) LogMode(level ormLogger.LogLevel) ormLogger.Interface {
 	newLogger := *l
 	newLogger.LogLevel = level
 	return &newLogger
 }
 
-func (l logger) Printf(level gormLogger.LogLevel, format string, v ...interface{}) {
+func (l gormLogger) Printf(level ormLogger.LogLevel, format string, v ...interface{}) {
 	s := fmt.Sprintf(format, v...)
 	switch level {
-	case gormLogger.Error:
+	case ormLogger.Error:
 		if l.Writer != nil {
 			l.Writer.Error(s)
 		}
 		if l.Open() {
 			l.Push(s)
 		}
-	case gormLogger.Warn:
+	case ormLogger.Warn:
 		if l.Writer != nil {
 			l.Writer.Warn(s)
 		}
@@ -83,42 +84,42 @@ func (l logger) Printf(level gormLogger.LogLevel, format string, v ...interface{
 	}
 }
 
-func (l logger) Info(ctx context.Context, msg string, data ...interface{}) {
-	if l.LogLevel >= gormLogger.Info {
-		l.Printf(gormLogger.Info, l.infoStr+msg, append([]interface{}{fileWithLineNum()}, data...)...)
+func (l gormLogger) Info(ctx context.Context, msg string, data ...interface{}) {
+	if l.LogLevel >= ormLogger.Info {
+		l.Printf(ormLogger.Info, l.infoStr+msg, append([]interface{}{fileWithLineNum()}, data...)...)
 	}
 }
 
-func (l logger) Warn(ctx context.Context, msg string, data ...interface{}) {
-	if l.LogLevel >= gormLogger.Warn {
-		l.Printf(gormLogger.Warn, l.warnStr+msg, append([]interface{}{fileWithLineNum()}, data...)...)
+func (l gormLogger) Warn(ctx context.Context, msg string, data ...interface{}) {
+	if l.LogLevel >= ormLogger.Warn {
+		l.Printf(ormLogger.Warn, l.warnStr+msg, append([]interface{}{fileWithLineNum()}, data...)...)
 	}
 }
 
-func (l logger) Error(ctx context.Context, msg string, data ...interface{}) {
-	if l.LogLevel >= gormLogger.Error {
-		l.Printf(gormLogger.Error, l.errStr+msg, append([]interface{}{fileWithLineNum()}, data...)...)
+func (l gormLogger) Error(ctx context.Context, msg string, data ...interface{}) {
+	if l.LogLevel >= ormLogger.Error {
+		l.Printf(ormLogger.Error, l.errStr+msg, append([]interface{}{fileWithLineNum()}, data...)...)
 	}
 }
 
-func (l logger) Trace(ctx context.Context, begin time.Time, fc func() (string, int64), err error) {
+func (l gormLogger) Trace(ctx context.Context, begin time.Time, fc func() (string, int64), err error) {
 	if l.LogLevel > 0 {
 		elapsed := time.Since(begin)
 		switch {
-		case err != nil && l.LogLevel >= gormLogger.Error:
+		case err != nil && l.LogLevel >= ormLogger.Error:
 			sql, rows := fc()
 			if errors.Is(err, gorm.ErrRecordNotFound) {
-				l.Printf(gormLogger.Info, l.traceStr, fileWithLineNum(), float64(elapsed.Nanoseconds())/1e6, rows, sql)
+				l.Printf(ormLogger.Info, l.traceStr, fileWithLineNum(), float64(elapsed.Nanoseconds())/1e6, rows, sql)
 			} else {
-				l.Printf(gormLogger.Error, l.traceErrStr, fileWithLineNum(), err, float64(elapsed.Nanoseconds())/1e6, rows, sql)
+				l.Printf(ormLogger.Error, l.traceErrStr, fileWithLineNum(), err, float64(elapsed.Nanoseconds())/1e6, rows, sql)
 			}
-		case elapsed > l.SlowThreshold && l.SlowThreshold != 0 && l.LogLevel >= gormLogger.Warn:
+		case elapsed > l.SlowThreshold && l.SlowThreshold != 0 && l.LogLevel >= ormLogger.Warn:
 			sql, rows := fc()
 			slowLog := fmt.Sprintf("SLOW SQL >= %v", l.SlowThreshold)
-			l.Printf(gormLogger.Warn, l.traceWarnStr, slowLog, fileWithLineNum(), float64(elapsed.Nanoseconds())/1e6, rows, sql)
-		case l.LogLevel >= gormLogger.Info:
+			l.Printf(ormLogger.Warn, l.traceWarnStr, slowLog, fileWithLineNum(), float64(elapsed.Nanoseconds())/1e6, rows, sql)
+		case l.LogLevel >= ormLogger.Info:
 			sql, rows := fc()
-			l.Printf(gormLogger.Info, l.traceStr, fileWithLineNum(), float64(elapsed.Nanoseconds())/1e6, rows, sql)
+			l.Printf(ormLogger.Info, l.traceStr, fileWithLineNum(), float64(elapsed.Nanoseconds())/1e6, rows, sql)
 		}
 	}
 }
