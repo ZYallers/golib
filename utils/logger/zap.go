@@ -11,9 +11,9 @@ import (
 )
 
 const (
-	suffix              = "log"
-	cacheMaxSize        = 100
-	perTimeDeleteNumber = 10
+	suffix       = "log"
+	cacheMaxSize = 100
+	perDelNum    = 10
 )
 
 var (
@@ -45,35 +45,35 @@ func GetLoggerDir() string {
 	return loggerDir
 }
 
-func Use(f string, opts ...Option) *zap.Logger {
-	filename, dir := f, loggerDir
-	if filename == "" {
-		filename = time.Now().Format("20060102")
+func Use(filename string, opts ...Option) *zap.Logger {
+	fn, dir := filename, loggerDir
+	if fn == "" {
+		fn = time.Now().Format("20060102")
 	}
 	if dir == "" {
 		dir, _ = filepath.Abs(filepath.Dir("."))
 	}
-	fp, _ := filepath.Abs(dir + "/" + filename + "." + suffix)
-	return NewLogger(fp, opts...)
+	file, _ := filepath.Abs(dir + "/" + fn + "." + suffix)
+	return NewLogger(file, opts...)
 }
 
-func NewLogger(f string, opts ...Option) *zap.Logger {
-	v, exist := loggerDict.GetOrPutFunc(f, func(filename string) (interface{}, error) {
-		cfg := &defaultConfig
+func NewLogger(file string, opts ...Option) *zap.Logger {
+	v, exist := loggerDict.GetOrPutFunc(file, func(filename string) (interface{}, error) {
+		cfg := &config{maxSize: 100, localTime: true}
 		for _, opt := range opts {
 			opt(cfg)
 		}
-		//fmt.Printf("%+v\n", cfg)
 		lk := &lumberjack.Logger{Filename: filename, MaxSize: cfg.maxSize, MaxAge: cfg.maxAge,
 			MaxBackups: cfg.maxBackups, LocalTime: cfg.localTime, Compress: cfg.compress}
 		logger := zap.New(zapcore.NewCore(jsonEncoder, zapcore.AddSync(lk), levelEnabler))
 		return logger, nil
 	})
-	// Randomly delete ${perTimeDeleteNumber} cached logger after exceeding ${cacheMaxSize}
+
+	// Randomly delete ${perDelNum} cached logger after exceeding ${cacheMaxSize}
 	if !exist && loggerDict.Len() >= cacheMaxSize {
-		counter, delNum := 0, perTimeDeleteNumber
+		counter, delNum := 0, perDelNum
 		for key, _ := range loggerDict.Data() {
-			if key == f {
+			if key == file {
 				continue
 			}
 			if counter++; counter > delNum {
@@ -82,6 +82,7 @@ func NewLogger(f string, opts ...Option) *zap.Logger {
 			loggerDict.Delete(key)
 		}
 	}
+
 	logger, _ := v.(*zap.Logger)
 	return logger
 }
