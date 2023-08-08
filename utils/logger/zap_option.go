@@ -10,8 +10,6 @@ type config struct {
 
 type Option func(c *config)
 
-var defaultConfig = config{maxSize: 100, maxAge: 0, maxBackups: 0, localTime: true, compress: false}
-
 func WithMaxSize(s int) Option {
 	return func(c *config) {
 		c.maxSize = s
