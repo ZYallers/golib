@@ -10,6 +10,7 @@ require (
 	github.com/natefinch/lumberjack v2.0.0+incompatible
 	github.com/onsi/ginkgo v1.16.5 // indirect
 	github.com/onsi/gomega v1.20.0 // indirect
+	github.com/panjf2000/ants/v2 v2.8.0
 	github.com/syyongx/php2go v0.9.7
 	github.com/techoner/gophp v0.2.0
 	github.com/tidwall/gjson v1.6.1
