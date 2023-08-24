@@ -8,8 +8,7 @@ import (
 )
 
 func TestNewPoolAndConfig(t *testing.T) {
-	NewPool(
-		WithPoolSize(10),
+	NewPool(10,
 		WithSubmitTimeout(8*time.Second),
 		WithSubmitInterval(2*time.Second),
 		WithExpiryDuration(5*time.Second),
@@ -17,17 +16,24 @@ func TestNewPoolAndConfig(t *testing.T) {
 			log.Println("panic handler:", r)
 		}),
 	)
-	t.Logf("pool-> %#v\n", Pool())
-	t.Logf("config-> %#v\n", Config())
+
+	p := Pool()
+	t.Logf("pool-> %#v\n", p)
+	cfg := Config()
+	t.Logf("config-> %#v\n", cfg)
+	t.Log("pool cap:", p.Cap())
+	p.Tune(200)
+	t.Logf("config-> %#v\n", cfg)
 	Go(func() {
 		panic("test panic")
 	})
+	t.Log("pool cap:", p.Cap())
 	time.Sleep(3 * time.Second)
 }
 
 var sum int32
 
-func myTask(i int) func() {
+func task(i int) func() {
 	return func() {
 		if i == 99 {
 			panic("test panic")
@@ -39,12 +45,9 @@ func myTask(i int) func() {
 }
 
 func TestGo(t *testing.T) {
-	NewPool(
-		WithPoolSize(10),
-		WithSubmitTimeout(8*time.Second),
-	)
+	NewPool(10, WithSubmitTimeout(8*time.Second))
 	for i := 0; i < 100; i++ {
-		Go(myTask(i))
+		Go(task(i))
 	}
 	time.Sleep(30 * time.Second)
 }

@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"runtime"
 	"runtime/debug"
+	"sync"
 	"time"
 
 	"github.com/panjf2000/ants/v2"
@@ -17,17 +18,21 @@ const (
 )
 
 var (
-	pool   *ants.Pool
-	config *PoolConfig
+	pool          *ants.Pool
+	config        *PoolConfig
+	nilCheck      sync.Once
+	defaultLogger = new(poolLogger)
 )
 
-func NewPool(options ...PoolOption) {
+func NewPool(size int, options ...PoolOption) {
+	if size <= 0 {
+		size = defaultPoolSize
+	}
 	config = &PoolConfig{
-		PoolSize:       defaultPoolSize,
 		ExpiryDuration: defaultExpiryDuration,
 		SubmitTimeout:  defaultSubmitTimeout,
 		SubmitInterval: defaultSubmitInterval,
-		Logger:         &poolLogger{},
+		Logger:         defaultLogger,
 		PanicHandler: func(r interface{}) {
 			config.Logger.Printf("worker exits from panic: %v\n%s", r, debug.Stack())
 		},
@@ -35,7 +40,7 @@ func NewPool(options ...PoolOption) {
 	for _, option := range options {
 		option(config)
 	}
-	pool, _ = ants.NewPool(config.PoolSize,
+	pool, _ = ants.NewPool(size,
 		ants.WithNonblocking(true),
 		ants.WithLogger(config.Logger),
 		ants.WithExpiryDuration(config.ExpiryDuration),
@@ -43,11 +48,13 @@ func NewPool(options ...PoolOption) {
 	)
 }
 
-func Pool() *ants.Pool { return pool }
-
-func Config() *PoolConfig { return config }
-
 func Go(task func()) {
+	nilCheck.Do(func() {
+		if pool == nil {
+			NewPool(0)
+		}
+	})
+
 	go func(f func()) {
 		defer func() {
 			if r := recover(); r != nil {
@@ -73,8 +80,12 @@ func Go(task func()) {
 	}(task)
 }
 
-func taskName(task func()) string {
-	funcValue := reflect.ValueOf(task)
-	funcName := runtime.FuncForPC(funcValue.Pointer()).Name()
-	return funcName
+func Pool() *ants.Pool { return pool }
+
+func Config() *PoolConfig { return config }
+
+func taskName(f func()) string {
+	fv := reflect.ValueOf(f)
+	fn := runtime.FuncForPC(fv.Pointer()).Name()
+	return fn
 }

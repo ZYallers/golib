@@ -3,7 +3,6 @@ package ants
 import "time"
 
 type PoolConfig struct {
-	PoolSize       int
 	ExpiryDuration time.Duration
 	SubmitTimeout  time.Duration
 	SubmitInterval time.Duration
@@ -12,12 +11,6 @@ type PoolConfig struct {
 }
 
 type PoolOption func(c *PoolConfig)
-
-func WithPoolSize(size int) PoolOption {
-	return func(c *PoolConfig) {
-		c.PoolSize = size
-	}
-}
 
 func WithLogger(logger PoolLogger) PoolOption {
 	return func(c *PoolConfig) {
