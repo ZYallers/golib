@@ -2,6 +2,7 @@ package logger
 
 import (
 	"go.uber.org/zap"
+	"log"
 	"testing"
 	"time"
 )
@@ -14,6 +15,12 @@ func TestSetDefault(t *testing.T) {
 	time.Sleep(3 * time.Second)
 	SetDefault(Use("test2"))
 	Debug("message2")
+}
+
+func TestRedirectStdLog(t *testing.T) {
+	logger := Use("test2")
+	RedirectStdLog(logger)
+	log.Println("RedirectStdLog")
 }
 
 func TestDefault(t *testing.T) {
