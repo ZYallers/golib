@@ -5,13 +5,9 @@ import (
 	"crypto/md5"
 	"fmt"
 	"io"
-	"math"
-	"math/rand"
-	"strconv"
-	"time"
 )
 
-// 字符串首字母转成大写
+// StrFirstToUpper 字符串首字母转成大写
 func StrFirstToUpper(str string) string {
 	if len(str) < 1 {
 		return ""
@@ -23,7 +19,7 @@ func StrFirstToUpper(str string) string {
 	return string(strArray)
 }
 
-// 字符串首字母转成小写
+// StrFirstToLower 字符串首字母转成小写
 func StrFirstToLower(str string) string {
 	if len(str) < 1 {
 		return ""
@@ -35,6 +31,7 @@ func StrFirstToLower(str string) string {
 	return string(strArr)
 }
 
+// MD5 md5
 func MD5(str string) string {
 	w := md5.New()
 	_, _ = io.WriteString(w, str)
@@ -74,13 +71,7 @@ func Nl2br(str string, isXhtml bool) string {
 	return buf.String()
 }
 
-// 生成指定位数的随机数
-func CreateCaptcha(num int) string {
-	return fmt.Sprintf("%0"+strconv.Itoa(num)+"v",
-		rand.New(rand.NewSource(time.Now().UnixNano())).Int31n(int32(math.Pow(10, float64(num)))))
-}
-
-// 截取字符串（支持中文）
+// SubString 截取字符串（支持中文）
 func SubString(str string, begin, length int) string {
 	rs := []rune(str)
 	lth := len(rs)
