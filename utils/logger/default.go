@@ -4,23 +4,30 @@ import (
 	"go.uber.org/zap"
 )
 
-var defaultLogger, stdLogger *zap.Logger
+var defaultLogger *zap.Logger
 
-func SetDefault(logger *zap.Logger) {
-	cp := *logger
-	defaultLogger = &cp
-	stdLogger = defaultLogger.WithOptions(zap.AddCallerSkip(1))
-	zap.ReplaceGlobals(defaultLogger)
-	zap.RedirectStdLog(defaultLogger)
+func SetDefault(log *zap.Logger) {
+	defaultLogger = clone(log)
+}
+
+func RedirectStdLog(log *zap.Logger) {
+	stdLogger := log.WithOptions(zap.AddCallerSkip(1))
+	zap.ReplaceGlobals(stdLogger)
+	zap.RedirectStdLog(stdLogger)
 }
 
 func Default() *zap.Logger                       { return defaultLogger }
-func With(fields ...zap.Field) *zap.Logger       { return stdLogger.With(fields...) }
-func WithOptions(opts ...zap.Option) *zap.Logger { return stdLogger.WithOptions(opts...) }
-func Debug(msg string, fields ...zap.Field)      { stdLogger.Debug(msg, fields...) }
-func Info(msg string, fields ...zap.Field)       { stdLogger.Info(msg, fields...) }
-func Warn(msg string, fields ...zap.Field)       { stdLogger.Warn(msg, fields...) }
-func Error(msg string, fields ...zap.Field)      { stdLogger.Error(msg, fields...) }
-func DPanic(msg string, fields ...zap.Field)     { stdLogger.DPanic(msg, fields...) }
-func Panic(msg string, fields ...zap.Field)      { stdLogger.Panic(msg, fields...) }
-func Fatal(msg string, fields ...zap.Field)      { stdLogger.Fatal(msg, fields...) }
+func With(fields ...zap.Field) *zap.Logger       { return defaultLogger.With(fields...) }
+func WithOptions(opts ...zap.Option) *zap.Logger { return defaultLogger.WithOptions(opts...) }
+func Debug(msg string, fields ...zap.Field)      { defaultLogger.Debug(msg, fields...) }
+func Info(msg string, fields ...zap.Field)       { defaultLogger.Info(msg, fields...) }
+func Warn(msg string, fields ...zap.Field)       { defaultLogger.Warn(msg, fields...) }
+func Error(msg string, fields ...zap.Field)      { defaultLogger.Error(msg, fields...) }
+func DPanic(msg string, fields ...zap.Field)     { defaultLogger.DPanic(msg, fields...) }
+func Panic(msg string, fields ...zap.Field)      { defaultLogger.Panic(msg, fields...) }
+func Fatal(msg string, fields ...zap.Field)      { defaultLogger.Fatal(msg, fields...) }
+
+func clone(log *zap.Logger) *zap.Logger {
+	cp := *log
+	return &cp
+}
