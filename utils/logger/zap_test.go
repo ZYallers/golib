@@ -1,12 +1,13 @@
 package logger
 
 import (
-	"go.uber.org/zap"
 	"path/filepath"
 	"strconv"
 	"sync"
 	"testing"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 func TestSetLoggerDir(t *testing.T) {

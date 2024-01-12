@@ -1,9 +1,10 @@
 package types
 
 import (
-	"gorm.io/gorm"
 	"sync"
 	"sync/atomic"
+
+	"gorm.io/gorm"
 )
 
 type MysqlDialect struct {

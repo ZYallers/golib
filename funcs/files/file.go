@@ -1,10 +1,11 @@
 package files
 
 import (
-	strings2 "github.com/ZYallers/golib/funcs/strings"
 	"os"
 	"runtime"
 	"strings"
+
+	strings2 "github.com/ZYallers/golib/funcs/strings"
 )
 
 func CurrentMethodName() string {

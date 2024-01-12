@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// 日期转周几
+// GetWeekDay 日期转周几
 func GetWeekDay(date string) string {
 	var WeekDayMap = map[string]string{
 		"Monday":    "周一",
@@ -24,7 +24,7 @@ func GetWeekDay(date string) string {
 	return WeekDayMap[dayInt]
 }
 
-// 根据生日算年龄
+// BirthdayToAge 根据生日算年龄
 func BirthdayToAge(birthday string) (age int) {
 	if len(strings.Split(birthday, `-`)) == 2 {
 		birthday = birthday + `-01` // 补上日期
@@ -52,7 +52,7 @@ func BirthdayToAge(birthday string) (age int) {
 	return
 }
 
-// 获取两个时间的秒数差
+// GetTimeRemainSeconds 获取两个时间的秒数差
 func GetTimeRemainSeconds(startTimeStr, endTimeStr string) int {
 	timeLayOut := "2006-01-02 15:04:05"
 	loc, _ := time.LoadLocation("Local")
@@ -64,12 +64,12 @@ func GetTimeRemainSeconds(startTimeStr, endTimeStr string) int {
 	return int(remain)
 }
 
-// 获取某一天的0点时间
+// GetZeroTime 获取某一天的0点时间
 func GetZeroTime(t time.Time) time.Time {
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 }
 
-// 获取本周周一的日期
+// GetMondayOfWeek 获取本周周一的日期
 func GetMondayOfWeek(t time.Time, fmtStr string) (dayStr string) {
 	dayObj := GetZeroTime(t)
 	if t.Weekday() == time.Monday {
@@ -85,7 +85,7 @@ func GetMondayOfWeek(t time.Time, fmtStr string) (dayStr string) {
 	return
 }
 
-// 获取上周周日日期
+// GetNextWeekMonday 获取上周周日日期
 func GetNextWeekMonday(t time.Time, fmtStr string) (day string, err error) {
 	monday := GetMondayOfWeek(t, fmtStr)
 	dayObj, err := time.Parse(fmtStr, monday)
@@ -96,7 +96,7 @@ func GetNextWeekMonday(t time.Time, fmtStr string) (day string, err error) {
 	return
 }
 
-// 通过ISOWeek翻转得到周的日期时间
+// FirstDayOfISOWeek 通过ISOWeek翻转得到周的日期时间
 // @see https://blog.csdn.net/pingD/article/details/60964306
 func FirstDayOfISOWeek(year int, week int, timezone *time.Location) time.Time {
 	date := time.Date(year, 0, 0, 0, 0, 0, 0, timezone)

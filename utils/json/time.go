@@ -6,21 +6,21 @@ import (
 	"time"
 )
 
-type Time time.Time
-
 const (
 	format = "2006-01-02 15:04:05"
 	zone   = "Asia/Shanghai"
 )
 
-// implements json unmarshal interface.
+type Time time.Time
+
+// UnmarshalJSON implements json unmarshal interface.
 func (t *Time) UnmarshalJSON(data []byte) (err error) {
 	now, err := time.ParseInLocation(`"`+format+`"`, string(data), time.Local)
 	*t = Time(now)
 	return
 }
 
-// implements json marshal interface.
+// MarshalJSON implements json marshal interface.
 func (t Time) MarshalJSON() ([]byte, error) {
 	if time.Time(t).IsZero() {
 		return []byte{'n', 'u', 'l', 'l'}, nil

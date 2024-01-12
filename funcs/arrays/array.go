@@ -2,7 +2,7 @@ package arrays
 
 import "reflect"
 
-// Determine whether a value is included in the array
+// InArray Determine whether a value is included in the array
 func InArray(val interface{}, array interface{}) (exists bool, index int) {
 	exists = false
 	index = -1
@@ -20,7 +20,7 @@ func InArray(val interface{}, array interface{}) (exists bool, index int) {
 	return
 }
 
-// Get the intersection of two slices
+// Intersect Get the intersection of two slices
 func Intersect(slice1 []int, slice2 []int) []int {
 	m := make(map[int]int)
 	n := make([]int, 0)
@@ -36,7 +36,7 @@ func Intersect(slice1 []int, slice2 []int) []int {
 	return n
 }
 
-// Find out the elements in s1 and not in s2
+// Difference Find out the elements in s1 and not in s2
 func Difference(s1, s2 []int) []int {
 	m := make(map[int]int)
 	n := make([]int, 0)
@@ -57,7 +57,7 @@ func Difference(s1, s2 []int) []int {
 	return n
 }
 
-// Remove duplicate values
+// RemoveDuplicateWithInt Remove duplicate values
 func RemoveDuplicateWithInt(arr []int) []int {
 	var result []int
 	tmp := map[int]byte{}
@@ -71,7 +71,7 @@ func RemoveDuplicateWithInt(arr []int) []int {
 	return result
 }
 
-// Remove duplicate values
+// RemoveDuplicateWithString Remove duplicate values
 func RemoveDuplicateWithString(arr []string) []string {
 	var result []string
 	tmp := map[string]byte{}
@@ -85,7 +85,7 @@ func RemoveDuplicateWithString(arr []string) []string {
 	return result
 }
 
-// Delete the specified value in the array
+// RemoveWithString Delete the specified value in the array
 func RemoveWithString(arr []string, in string) []string {
 	for k, v := range arr {
 		if v == in {
@@ -96,7 +96,7 @@ func RemoveWithString(arr []string, in string) []string {
 	return arr
 }
 
-// Delete the specified value in the array
+// RemoveWithInt Delete the specified value in the array
 func RemoveWithInt(arr []int, in int) []int {
 	for k, v := range arr {
 		if v == in {

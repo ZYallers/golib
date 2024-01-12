@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	defaultPoolSize       = 100
+	defaultPoolSize       = 1000
 	defaultSubmitTimeout  = 30 * time.Second
 	defaultSubmitInterval = 10 * time.Millisecond
 	defaultExpiryDuration = 10 * time.Second
