@@ -3,11 +3,13 @@ package nets
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ZYallers/golib/utils/curl"
-	"github.com/axgle/mahonia"
+	"io/ioutil"
 	"net"
+	"net/http"
 	"strings"
 	"time"
+
+	"github.com/axgle/mahonia"
 )
 
 func SystemIP() string {
@@ -33,11 +35,18 @@ func GetIPByPconline(ip string) string {
 	if ip != "" {
 		url += "&ip=" + ip
 	}
-	resp, err := curl.NewRequest(url).SetTimeOut(3 * time.Second).Get()
-	if err != nil || resp.Body == "" {
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
 		return result
 	}
-	body := mahonia.NewDecoder("GBK").ConvertString(resp.Body)
+	client := http.Client{Timeout: 3 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return result
+	}
+	defer resp.Body.Close()
+	b, _ := ioutil.ReadAll(resp.Body)
+	body := mahonia.NewDecoder("GBK").ConvertString(string(b))
 	if body == "" {
 		return result
 	}

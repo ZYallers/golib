@@ -1,11 +1,12 @@
 package dingtalk
 
 import (
-	"github.com/ZYallers/golib/utils/curl"
+	"bytes"
+	"encoding/json"
+	"io/ioutil"
+	"net/http"
 	"time"
 )
-
-var header = map[string]string{"Content-Type": "application/json;charset=utf-8"}
 
 func SendMessage(token, content string, isAtAll bool, timeout time.Duration) (string, error) {
 	postData := map[string]interface{}{
@@ -14,9 +15,24 @@ func SendMessage(token, content string, isAtAll bool, timeout time.Duration) (st
 		"at":      map[string]interface{}{"isAtAll": isAtAll},
 	}
 	uri := "https://oapi.dingtalk.com/robot/send?access_token=" + token
-	resp, err := curl.NewRequest(uri).SetHeaders(header).SetPostData(postData).SetTimeOut(timeout).Post()
-	if resp == nil {
+	b, err := json.Marshal(postData)
+	if err != nil {
 		return "", err
 	}
-	return resp.Body, err
+	req, err := http.NewRequest(http.MethodPost, uri, bytes.NewBuffer(b))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/json;charset=utf-8")
+	client := http.Client{Timeout: timeout}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	b, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	return string(b), err
 }
