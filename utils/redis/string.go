@@ -1,9 +1,10 @@
 package redis
 
 import (
-	"github.com/ZYallers/golib/utils/json"
 	"math/rand"
 	"time"
+
+	"github.com/ZYallers/golib/utils/json"
 )
 
 // 数据不存在情况下，为防止缓存雪崩，随机返回一个30到60秒的有效时间

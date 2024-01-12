@@ -2,9 +2,10 @@ package redis
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/ZYallers/golib/types"
 	"github.com/go-redis/redis"
-	"time"
 )
 
 const (

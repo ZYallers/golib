@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	libIo "github.com/ZYallers/golib/funcs/io"
 	"github.com/ZYallers/golib/utils/json"
+	"github.com/ZYallers/golib/utils/trace"
 )
 
 type Request struct {
@@ -25,14 +25,15 @@ type Request struct {
 	Body     io.Reader
 	Response *Response
 
-	close              bool
+	closeConn          bool
+	openTracing        bool
 	error              error
 	startTime          time.Time
 	responseReturnTime time.Time
 	body               string
 	client             *http.Client
 	rawRequest         *http.Request
-	trace              *clientTrace
+	clientTrace        *clientTrace
 }
 
 // NewRequest new request
@@ -56,7 +57,15 @@ func (r *Request) SetUrl(url string) *Request {
 
 // SetHeaders set request headers
 func (r *Request) SetHeaders(headers map[string]string) *Request {
-	r.Headers = headers
+	if len(headers) == 0 {
+		return r
+	}
+	if r.Headers == nil {
+		r.Headers = map[string]string{}
+	}
+	for k, v := range headers {
+		r.Headers[k] = v
+	}
 	return r
 }
 
@@ -71,7 +80,15 @@ func (r *Request) SetHeader(key, value string) *Request {
 
 // SetCookies set request cookies
 func (r *Request) SetCookies(cookies map[string]string) *Request {
-	r.Cookies = cookies
+	if len(cookies) == 0 {
+		return r
+	}
+	if r.Cookies == nil {
+		r.Cookies = map[string]string{}
+	}
+	for k, v := range cookies {
+		r.Cookies[k] = v
+	}
 	return r
 }
 
@@ -86,7 +103,15 @@ func (r *Request) SetCookie(key, value string) *Request {
 
 // SetQueries set request query
 func (r *Request) SetQueries(queries map[string]string) *Request {
-	r.Queries = queries
+	if len(queries) == 0 {
+		return r
+	}
+	if r.Queries == nil {
+		r.Queries = map[string]string{}
+	}
+	for k, v := range queries {
+		r.Queries[k] = v
+	}
 	return r
 }
 
@@ -101,12 +126,15 @@ func (r *Request) SetQuery(key, value string) *Request {
 
 // SetPostData set post data
 func (r *Request) SetPostData(data map[string]interface{}) *Request {
-	if data == nil {
+	if len(data) == 0 {
 		return r
 	}
-
-	r.PostData = data
-
+	if r.PostData == nil {
+		r.PostData = map[string]interface{}{}
+	}
+	for k, v := range data {
+		r.PostData[k] = v
+	}
 	if ct, ok := r.Headers["Content-Type"]; ok && strings.HasPrefix(ct, JsonContentType) {
 		if pb, err := json.Marshal(r.PostData); err != nil {
 			r.error = err
@@ -115,8 +143,6 @@ func (r *Request) SetPostData(data map[string]interface{}) *Request {
 		}
 		return r
 	}
-
-	// If the Content Type cannot be matched, the default method is application/x-www-form-urlencoded
 	posts := url.Values{}
 	for k, v := range r.PostData {
 		posts.Set(k, fmt.Sprint(v))
@@ -139,11 +165,11 @@ func (r *Request) SetBody(body interface{}) *Request {
 	case bytes.Buffer:
 		r.body = b.String()
 	case io.Reader:
-		if cb, err := libIo.Copy(b); err == nil {
+		if cb, err := ioCopy(b); err == nil {
 			r.body = string(cb)
 		}
 	case io.ReadCloser:
-		if cb, err := libIo.Copy(b); err == nil {
+		if cb, err := ioCopy(b); err == nil {
 			r.body = string(cb)
 		}
 	default:
@@ -178,28 +204,28 @@ func (r *Request) SetContentType(contentType string) *Request {
 	return r
 }
 
-// EnableCloseConn closes the connection after sending this request and reading its response if set to true in HTTP/1.1 and HTTP/2.
+// CloseConn whether closes the connection after sending this request and reading its response if set to true in HTTP/1.1 and HTTP/2.
 // Setting this field prevents re-use of TCP connections between requests to the same hosts event if EnableKeepAlives() were called.
-func (r *Request) EnableCloseConn() *Request {
-	r.close = true
+func (r *Request) CloseConn(enable bool) *Request {
+	r.closeConn = enable
 	return r
 }
 
-// DisableCloseConn disable close connection
-func (r *Request) DisableCloseConn() *Request {
-	r.close = false
+// OpenTracing whether enable openTracing
+func (r *Request) OpenTracing(enable bool) *Request {
+	r.openTracing = enable
 	return r
 }
 
 // EnableTrace enables trace (http3 currently does not support trace).
 func (r *Request) EnableTrace() *Request {
-	r.trace = &clientTrace{}
+	r.clientTrace = &clientTrace{}
 	return r
 }
 
 // DisableTrace disables trace.
 func (r *Request) DisableTrace() *Request {
-	r.trace = nil
+	r.clientTrace = nil
 	return r
 }
 
@@ -220,8 +246,8 @@ func (r *Request) Send() (*Response, error) {
 	r.Response = &Response{Request: r}
 
 	ctx := context.Background()
-	if r.trace != nil {
-		ctx = r.trace.createContext(ctx)
+	if r.clientTrace != nil {
+		ctx = r.clientTrace.createContext(ctx)
 	}
 	if r.Timeout > 0 {
 		var cancel context.CancelFunc
@@ -239,8 +265,13 @@ func (r *Request) Send() (*Response, error) {
 	}
 
 	// Set close connection
-	if r.close {
+	if r.closeConn {
 		r.rawRequest.Close = true
+	}
+
+	// Set header TraceId
+	if r.openTracing {
+		r.setTraceId()
 	}
 
 	// Set header
@@ -278,7 +309,7 @@ func (r *Request) Send() (*Response, error) {
 
 // TraceInfo returns the trace information, only available if trace is enabled
 func (r *Request) TraceInfo() TraceInfo {
-	ct := r.trace
+	ct := r.clientTrace
 
 	if ct == nil {
 		return TraceInfo{}
@@ -347,6 +378,7 @@ func (r *Request) TraceInfo() TraceInfo {
 	return ti
 }
 
+// DumpRequest dump request data
 func (r *Request) DumpRequest() string {
 	var buf bytes.Buffer
 
@@ -374,6 +406,7 @@ func (r *Request) DumpRequest() string {
 	return buf.String()
 }
 
+// DumpResponse dump response data
 func (r *Request) DumpResponse() string {
 	var buf bytes.Buffer
 	if r.Response != nil {
@@ -390,6 +423,14 @@ func (r *Request) DumpResponse() string {
 	return buf.String()
 }
 
+// DumpAll dump request and response data
 func (r *Request) DumpAll() string {
 	return r.DumpRequest() + "\r\n" + r.DumpResponse()
+}
+
+// setTraceId set traceId to request header from current goroutine id
+func (r *Request) setTraceId() {
+	if traceId := trace.GetGoIdTraceId(); traceId != "" {
+		r.SetHeader(trace.IdKey, traceId)
+	}
 }

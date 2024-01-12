@@ -3,9 +3,10 @@ package mysql
 import (
 	"database/sql"
 	"fmt"
+	"time"
+
 	"github.com/ZYallers/golib/types"
 	"gorm.io/gorm"
-	"time"
 )
 
 const (

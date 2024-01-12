@@ -1,13 +1,13 @@
 package logger
 
 import (
-	"github.com/ZYallers/golib/consts"
+	"path/filepath"
+	"time"
+
 	"github.com/ZYallers/golib/funcs/safe"
 	"github.com/natefinch/lumberjack"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"path/filepath"
-	"time"
 )
 
 const (
@@ -32,7 +32,7 @@ var (
 		EncodeDuration: zapcore.SecondsDurationEncoder,
 		EncodeCaller:   zapcore.ShortCallerEncoder,
 		EncodeTime: func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
-			enc.AppendString(t.Format(consts.TimeFormatLogger))
+			enc.AppendString(t.Format("2006/01/02 15:04:05.000"))
 		},
 	})
 )

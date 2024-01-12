@@ -1,10 +1,11 @@
 package logger
 
 import (
-	"go.uber.org/zap"
 	"log"
 	"testing"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 func TestSetDefault(t *testing.T) {

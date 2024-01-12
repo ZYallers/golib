@@ -3,13 +3,14 @@ package redis
 import (
 	"errors"
 	"fmt"
-	"github.com/ZYallers/golib/funcs/maths"
-	"github.com/go-redis/redis"
 	"io"
 	"os"
 	"strconv"
 	"sync/atomic"
 	"time"
+
+	"github.com/ZYallers/golib/funcs/maths"
+	"github.com/go-redis/redis"
 )
 
 // DistributedLock redis分布式锁

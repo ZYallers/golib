@@ -1,9 +1,10 @@
 package logger
 
 import (
-	"gorm.io/gorm/logger"
 	"testing"
 	"time"
+
+	"gorm.io/gorm/logger"
 )
 
 func TestNewGormLogger(t *testing.T) {

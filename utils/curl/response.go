@@ -2,7 +2,6 @@ package curl
 
 import (
 	"bytes"
-	"github.com/ZYallers/golib/funcs/io"
 	"net/http"
 	"time"
 )
@@ -87,7 +86,7 @@ func (r *Response) TraceInfo() TraceInfo {
 
 // TotalTime returns the total time of the request, from request we sent to response we received.
 func (r *Response) TotalTime() time.Duration {
-	if r.Request.trace != nil {
+	if r.Request.clientTrace != nil {
 		return r.Request.TraceInfo().TotalTime
 	}
 	return r.receivedAt.Sub(r.Request.startTime)
@@ -102,7 +101,7 @@ func (r *Response) ReceivedAt() time.Time {
 func (r *Response) readBody() {
 	if r.Raw != nil && r.Raw.Body != nil {
 		defer r.Raw.Body.Close()
-		if bts, err := io.Copy(r.Raw.Body); err == nil {
+		if bts, err := ioCopy(r.Raw.Body); err == nil {
 			r.Body = string(bts)
 		}
 	}
@@ -111,8 +110,8 @@ func (r *Response) readBody() {
 // setReceivedAt set ReceivedAt time
 func (r *Response) setReceivedAt() {
 	r.receivedAt = time.Now()
-	if r.Request.trace != nil {
-		r.Request.trace.endTime = r.receivedAt
+	if r.Request.clientTrace != nil {
+		r.Request.clientTrace.endTime = r.receivedAt
 	}
 }
 
