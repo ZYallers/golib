@@ -1,9 +1,10 @@
 package types
 
 import (
-	"github.com/go-redis/redis"
 	"sync"
 	"sync/atomic"
+
+	"github.com/go-redis/redis"
 )
 
 type RedisClient struct {
