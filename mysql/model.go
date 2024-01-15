@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ZYallers/golib/types"
 	"gorm.io/gorm"
 )
 
@@ -23,17 +22,17 @@ type Model struct {
 	DB    func() *gorm.DB
 }
 
-func (m *Model) NewMysql(dbc *types.DBCollector, mdt *types.MysqlDialect, f func() *gorm.Config, opts ...interface{}) (*gorm.DB, error) {
+func (m *Model) NewMysql(collector *Collector, dialect *Dialect, f func() *gorm.Config, opts ...interface{}) (*gorm.DB, error) {
 	var newErr error
 	for i := 0; i < retryMaxTimes; i++ {
-		dbc.Once(func() {
+		collector.Once(func() {
 			cfg := f()
 			cfg.DisableAutomaticPing = true
-			if dbc.Pointer, newErr = gorm.Open(m.Dialector(mdt), cfg); newErr != nil {
+			if collector.Pointer, newErr = gorm.Open(m.Dialector(dialect), cfg); newErr != nil {
 				return
 			}
 			var db *sql.DB
-			if db, newErr = dbc.Pointer.DB(); newErr != nil {
+			if db, newErr = collector.Pointer.DB(); newErr != nil {
 				return
 			}
 			ol, maxIdle, maxOpen := len(opts), defaultMaxIdleConns, defaultMaxOpenConns
@@ -57,21 +56,21 @@ func (m *Model) NewMysql(dbc *types.DBCollector, mdt *types.MysqlDialect, f func
 		})
 
 		if newErr == nil {
-			if dbc.Pointer == nil {
-				newErr = fmt.Errorf("new mysql %s is nil", mdt.Db)
+			if collector.Pointer == nil {
+				newErr = fmt.Errorf("new mysql %s is nil", dialect.Db)
 			} else {
 				var db *sql.DB
-				if db, newErr = dbc.Pointer.DB(); newErr == nil {
+				if db, newErr = collector.Pointer.DB(); newErr == nil {
 					newErr = db.Ping()
 				}
 			}
 		}
 
 		if newErr != nil {
-			dbc.Reset(func() { time.Sleep(retrySleepTime) })
+			collector.Reset(func() { time.Sleep(retrySleepTime) })
 		} else {
 			break
 		}
 	}
-	return dbc.Pointer, newErr
+	return collector.Pointer, newErr
 }

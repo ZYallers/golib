@@ -9,7 +9,7 @@ func InArray(val interface{}, array interface{}) (exists bool, index int) {
 	switch reflect.TypeOf(array).Kind() {
 	case reflect.Slice:
 		s := reflect.ValueOf(array)
-		for i, len := 0, s.Len(); i < len; i++ {
+		for i, l := 0, s.Len(); i < l; i++ {
 			if reflect.DeepEqual(val, s.Index(i).Interface()) == true {
 				index = i
 				exists = true

@@ -3,7 +3,6 @@ package mysql
 import (
 	"fmt"
 
-	"github.com/ZYallers/golib/types"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -16,11 +15,24 @@ const (
 	defaultTimeout          = "15s"
 )
 
-func (m *Model) Dialector(dialect *types.MysqlDialect) gorm.Dialector {
+type Dialect struct {
+	User             string
+	Pwd              string
+	Host             string
+	Port             string
+	Db               string
+	Charset          string
+	Loc              string
+	ParseTime        string
+	MaxAllowedPacket string
+	Timeout          string
+}
+
+func (m *Model) Dialector(dialect *Dialect) gorm.Dialector {
 	return mysql.Open(m.ParseDSN(dialect))
 }
 
-func (m *Model) ParseDSN(dialect *types.MysqlDialect) string {
+func (m *Model) ParseDSN(dialect *Dialect) string {
 	charset := defaultCharset
 	if dialect.Charset != "" {
 		charset = dialect.Charset
