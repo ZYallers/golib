@@ -4,6 +4,7 @@ go 1.15
 
 require (
 	github.com/BurntSushi/toml v1.2.0 // indirect
+	github.com/VictoriaMetrics/fastcache v1.12.2
 	github.com/axgle/mahonia v0.0.0-20180208002826-3358181d7394
 	github.com/coocood/freecache v1.2.4
 	github.com/go-redis/redis v6.15.9+incompatible
