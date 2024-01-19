@@ -5,7 +5,7 @@ import (
 	"os/exec"
 )
 
-// Blocking functions that execute external shell commands,
+// Shell Blocking functions that execute external shell commands,
 // wait for the execution to be completed and return standard output
 func Shell(name string, arg ...string) ([]byte, error) {
 	// The function returns a *cmd, which is used to execute the program specified by name with the given parameters

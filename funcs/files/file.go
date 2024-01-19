@@ -5,19 +5,19 @@ import (
 	"runtime"
 	"strings"
 
-	strings2 "github.com/ZYallers/golib/funcs/strings"
+	libstr "github.com/ZYallers/golib/funcs/strings"
 )
 
 func CurrentMethodName() string {
 	pc, _, _, _ := runtime.Caller(1)
 	name := runtime.FuncForPC(pc).Name()
-	return strings2.StrFirstToLower(name[strings.LastIndex(name, `.`)+1:])
+	return libstr.StrFirstToLower(name[strings.LastIndex(name, ".")+1:])
 }
 
 func CurrentFileName() string {
 	_, path, _, _ := runtime.Caller(1)
-	file := path[strings.LastIndex(path, `/`)+1:]
-	return file[0:strings.Index(file, `.`)]
+	file := path[strings.LastIndex(path, "/")+1:]
+	return file[0:strings.Index(file, ".")]
 }
 
 func FileIsExist(path string) bool {

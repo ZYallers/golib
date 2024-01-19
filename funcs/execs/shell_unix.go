@@ -16,7 +16,7 @@ type shellResult struct {
 	err    error
 }
 
-// Execute the shell command to set the execution timeout
+// ExecShellWithContext Execute the shell command to set the execution timeout
 func ExecShellWithContext(ctx context.Context, command string) (string, error) {
 	cmd := exec.Command("/bin/bash", "-c", command)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
