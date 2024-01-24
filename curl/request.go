@@ -12,7 +12,6 @@ import (
 
 	libio "github.com/ZYallers/golib/funcs/io"
 	"github.com/ZYallers/golib/json"
-	"github.com/ZYallers/golib/trace"
 )
 
 type Request struct {
@@ -27,14 +26,14 @@ type Request struct {
 	Response *Response
 
 	closeConn          bool
-	openTracing        bool
 	error              error
+	body               string
 	startTime          time.Time
 	responseReturnTime time.Time
-	body               string
 	client             *http.Client
 	rawRequest         *http.Request
 	clientTrace        *clientTrace
+	traceIdFunc        func() (k, v string)
 }
 
 // NewRequest new request
@@ -213,8 +212,8 @@ func (r *Request) CloseConn(enable bool) *Request {
 }
 
 // OpenTracing whether enable openTracing
-func (r *Request) OpenTracing(enable bool) *Request {
-	r.openTracing = enable
+func (r *Request) OpenTracing(fn func() (k, v string)) *Request {
+	r.traceIdFunc = fn
 	return r
 }
 
@@ -224,7 +223,7 @@ func (r *Request) EnableTrace() *Request {
 	return r
 }
 
-// DisableTrace disables trace.
+// DisableTrace disables trace
 func (r *Request) DisableTrace() *Request {
 	r.clientTrace = nil
 	return r
@@ -270,9 +269,10 @@ func (r *Request) Send() (*Response, error) {
 		r.rawRequest.Close = true
 	}
 
-	// Set header TraceId
-	if r.openTracing {
-		r.setTraceId()
+	// Set header trace id
+	if r.traceIdFunc != nil {
+		key, traceId := r.traceIdFunc()
+		r.rawRequest.Header.Set(key, traceId)
 	}
 
 	// Set header
@@ -427,11 +427,4 @@ func (r *Request) DumpResponse() string {
 // DumpAll dump request and response data
 func (r *Request) DumpAll() string {
 	return r.DumpRequest() + "\r\n" + r.DumpResponse()
-}
-
-// setTraceId set traceId to request header from current goroutine id
-func (r *Request) setTraceId() {
-	if traceId := trace.GetGoIdTraceId(); traceId != "" {
-		r.SetHeader(trace.IdKey, traceId)
-	}
 }

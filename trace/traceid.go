@@ -1,7 +1,6 @@
 package trace
 
 import (
-	"github.com/ZYallers/golib/goid"
 	"github.com/google/uuid"
 )
 
@@ -24,10 +23,6 @@ func GetCache() Cache {
 
 func NewTraceId() string {
 	return uuid.NewString()
-}
-
-func GetGoIdTraceId() string {
-	return GetTraceId(goid.GetString())
 }
 
 func HasTraceId(key string) bool {

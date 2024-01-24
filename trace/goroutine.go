@@ -3,11 +3,11 @@ package trace
 import "github.com/ZYallers/golib/goid"
 
 func Go(f func()) {
-	go func(parentTraceId string) {
+	go func(mainTraceId string) {
 		defer func() { recover() }()
-		goId := goid.GetString()
-		defer DelTraceId(goId)
-		SetTraceId(goId, parentTraceId)
+		id := goid.Get()
+		defer DelTraceId(id)
+		SetTraceId(id, mainTraceId)
 		f()
-	}(GetTraceId(goid.GetString()))
+	}(GetTraceId(goid.Get()))
 }
