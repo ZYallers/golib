@@ -6,7 +6,15 @@ import (
 	"github.com/petermattis/goid"
 )
 
-func GetInt() int64 {
+func Get() string {
+	return GetString()
+}
+
+func GetInt() int {
+	return int(goid.Get())
+}
+
+func GetInt64() int64 {
 	return goid.Get()
 }
 
