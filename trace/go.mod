@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/VictoriaMetrics/fastcache v1.12.2
-	github.com/ZYallers/golib/goid v0.0.1
+	github.com/ZYallers/golib/goid v0.0.2
 	github.com/coocood/freecache v1.2.4
 	github.com/google/uuid v1.5.0
 )

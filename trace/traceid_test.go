@@ -1,7 +1,6 @@
 package trace
 
 import (
-	"github.com/ZYallers/golib/goid"
 	"testing"
 	"time"
 )
@@ -34,13 +33,6 @@ func TestGetTraceId(t *testing.T) {
 	t.Logf("%#v\n", GetTraceId("1"))
 	SetTraceId("1", NewTraceId())
 	t.Logf("%#v\n", GetTraceId("1"))
-}
-
-func TestGetGoIdTraceId(t *testing.T) {
-	t.Logf("%#v\n", GetGoIdTraceId())
-	time.Sleep(5 * time.Second)
-	SetTraceId(goid.GetString(), NewTraceId())
-	t.Logf("%#v\n", GetGoIdTraceId())
 }
 
 func TestHasTraceId(t *testing.T) {
