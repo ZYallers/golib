@@ -12,10 +12,6 @@ const (
 	retrySleepTime = time.Second
 )
 
-type Redis struct {
-	Client func() *redis.Client
-}
-
 type Client struct {
 	Db   int
 	Host string
@@ -23,13 +19,17 @@ type Client struct {
 	Pwd  string
 }
 
-func (r *Redis) NewRedis(collector *Collector, client *Client, f func() *redis.Options) (*redis.Client, error) {
+type Redis struct {
+	Client func() *redis.Client
+}
+
+func (r *Redis) NewRedis(collector *Collector, client *Client, optsFunc func() *redis.Options) (*redis.Client, error) {
 	var newErr error
 	for i := 0; i < retryMaxTimes; i++ {
 		collector.Once(func() {
 			opts := &redis.Options{}
-			if f != nil {
-				opts = f()
+			if optsFunc != nil {
+				opts = optsFunc()
 			}
 			opts.Addr = client.Host + ":" + client.Port
 			opts.Password = client.Pwd

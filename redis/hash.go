@@ -1,17 +1,16 @@
 package redis
 
 import (
-	"errors"
 	"strings"
 
 	"github.com/ZYallers/golib/funcs/arrays"
 	"github.com/ZYallers/golib/json"
 )
 
-const hashAllFieldKey = "all"
+const HashAllFieldKey = "all"
 
 func (r *Redis) HGetAll(key string) (result []interface{}) {
-	all := r.Client().HGet(key, hashAllFieldKey).Val()
+	all := r.Client().HGet(key, HashAllFieldKey).Val()
 	if all == "" {
 		return
 	}
@@ -37,10 +36,10 @@ func (r *Redis) HMSet(key string, data map[string]interface{}) error {
 	}
 
 	if len(fields) == 0 {
-		return errors.New("the data that can be saved is empty")
+		return ErrInvalidField
 	}
 
-	if val := r.Client().HGet(key, hashAllFieldKey).Val(); val != "" {
+	if val := r.Client().HGet(key, HashAllFieldKey).Val(); val != "" {
 		fields = append(fields, strings.Split(val, ",")...)
 	}
 
@@ -48,13 +47,13 @@ func (r *Redis) HMSet(key string, data map[string]interface{}) error {
 	if len(fields) > 0 {
 		allFieldValue = strings.Join(arrays.RemoveDuplicateWithString(fields), ",")
 	}
-	fieldValues[hashAllFieldKey] = allFieldValue
+	fieldValues[HashAllFieldKey] = allFieldValue
 	return r.Client().HMSet(key, fieldValues).Err()
 }
 
 func (r *Redis) HMDel(key string, fields ...string) error {
 	newFields := make([]string, 0)
-	if val := r.Client().HGet(key, hashAllFieldKey).Val(); val != "" {
+	if val := r.Client().HGet(key, HashAllFieldKey).Val(); val != "" {
 		newFields = append(newFields, strings.Split(val, ",")...)
 	}
 	if len(newFields) > 0 {
@@ -70,7 +69,7 @@ func (r *Redis) HMDel(key string, fields ...string) error {
 
 	pl := r.Client().Pipeline()
 	pl.HDel(key, fields...)
-	pl.HSet(key, hashAllFieldKey, allFieldValue)
+	pl.HSet(key, HashAllFieldKey, allFieldValue)
 	_, err := pl.Exec()
 	return err
 }

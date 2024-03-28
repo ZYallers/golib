@@ -3,7 +3,7 @@ module github.com/ZYallers/golib/redis
 go 1.17
 
 require (
-	github.com/ZYallers/golib/funcs v0.0.1
+	github.com/ZYallers/golib/funcs v0.0.2
 	github.com/ZYallers/golib/json v0.0.1
 	github.com/go-redis/redis v6.15.9+incompatible
 )
