@@ -2,6 +2,7 @@ package files
 
 import (
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -29,4 +30,12 @@ func FileIsExist(path string) bool {
 		return false
 	}
 	return true
+}
+
+func GetFileNameWithoutExt(filePath string) string {
+	// 获取文件名（包含扩展名）
+	fileName := filepath.Base(filePath)
+	// 分割文件名和扩展名
+	fileNameWithoutExt := strings.TrimSuffix(fileName, filepath.Ext(fileName))
+	return fileNameWithoutExt
 }
