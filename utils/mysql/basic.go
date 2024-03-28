@@ -1,6 +1,7 @@
 package mysql
 
 import (
+	"gorm.io/gorm/schema"
 	"reflect"
 	"strings"
 
@@ -12,29 +13,43 @@ func (m *Model) Session() *gorm.DB {
 }
 
 func (m *Model) GetPrimaryKeyFieldName() (string, error) {
+	if m.Data == nil {
+		return "", ErrNilPointer
+	}
+
 	ptrType := reflect.TypeOf(m.Data)
 	if ptrType.Kind() != reflect.Ptr {
 		return "", ErrMustPtrData
 	}
+
 	strType := ptrType.Elem()
 	fieldNum := strType.NumField()
 	if fieldNum == 0 {
 		return "", ErrMissPrimaryKey
 	}
+
 	for i := 0; i < fieldNum; i++ {
-		if s := strType.Field(i).Tag.Get("gorm"); s != "" {
-			if strings.Contains(strings.ToUpper(s), "PRIMARYKEY") {
-				return strType.Field(i).Name, nil
+		if text := strType.Field(i).Tag.Get("gorm"); text != "" {
+			if tagSetting := schema.ParseTagSetting(text, ";"); len(tagSetting) > 0 {
+				if pk, ok := tagSetting["PRIMARYKEY"]; ok && pk == "PRIMARYKEY" {
+					if col, ok := tagSetting["COLUMN"]; ok && col != "" {
+						return col, nil
+					}
+				}
 			}
 		}
 	}
+
 	return "", ErrMissPrimaryKey
 }
 
 func (m *Model) AllFields(withBackQuote bool) string {
+	if m.Data == nil {
+		return ""
+	}
 	ptrType := reflect.TypeOf(m.Data)
 	if ptrType.Kind() != reflect.Ptr {
-		panic(ErrMustPtrData)
+		return ""
 	}
 	strType := ptrType.Elem()
 	fieldNum := strType.NumField()
