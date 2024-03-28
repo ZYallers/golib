@@ -3,7 +3,7 @@ module github.com/ZYallers/golib/curl
 go 1.17
 
 require (
-	github.com/ZYallers/golib/funcs v0.0.1
+	github.com/ZYallers/golib/funcs v0.0.2
 	github.com/ZYallers/golib/json v0.0.1
 	github.com/tidwall/gjson v1.6.1
 )

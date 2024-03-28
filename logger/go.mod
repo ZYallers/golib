@@ -3,7 +3,7 @@ module github.com/ZYallers/golib/logger
 go 1.17
 
 require (
-	github.com/ZYallers/golib/funcs v0.0.1
+	github.com/ZYallers/golib/funcs v0.0.2
 	github.com/natefinch/lumberjack v2.0.0+incompatible
 	go.uber.org/zap v1.21.0
 	gorm.io/gorm v1.20.8

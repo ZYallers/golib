@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func SendMessage(token, content string, isAtAll bool, timeout time.Duration) (string, error) {
+func SendMessage(token string, content string, isAtAll bool, timeout time.Duration) (string, error) {
 	postData := map[string]interface{}{
 		"msgtype": "text",
 		"text":    map[string]string{"content": content + "\n"},
