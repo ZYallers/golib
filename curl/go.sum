@@ -1,5 +1,5 @@
-github.com/ZYallers/golib/funcs v0.0.1 h1:5+UmNwepRyoz9eOqTe+corRganMQU1WozuR4mQzFxWA=
-github.com/ZYallers/golib/funcs v0.0.1/go.mod h1:TlqxCCBnAtphsFZnDTKxTdFyBhfdY/iUGsvo7j4WEjs=
+github.com/ZYallers/golib/funcs v0.0.2 h1:LWnxn4ugrr8Bk3PtO1BVvvZNun8NmtOoX0LrIYtZcWs=
+github.com/ZYallers/golib/funcs v0.0.2/go.mod h1:TlqxCCBnAtphsFZnDTKxTdFyBhfdY/iUGsvo7j4WEjs=
 github.com/ZYallers/golib/json v0.0.1 h1:4JuvSsNb3B85eRh4YWDqnsva3Pm1LO99hbIoAAhHGRU=
 github.com/ZYallers/golib/json v0.0.1/go.mod h1:2p6fuQ9DfBkXLNhROawwukUz3Q8CplafpYPK57i90F0=
 github.com/axgle/mahonia v0.0.0-20180208002826-3358181d7394/go.mod h1:Q8n74mJTIgjX4RBBcHnJ05h//6/k6foqmgE45jTQtxg=
