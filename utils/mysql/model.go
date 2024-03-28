@@ -12,66 +12,71 @@ import (
 const (
 	retryMaxTimes          = 3
 	retrySleepTime         = time.Second
-	defaultMaxIdleConns    = 5
-	defaultMaxOpenConns    = 50
-	defaultConnMaxIdleTime = 5 * time.Minute
-	defaultConnMaxLifetime = 10 * time.Minute
+	DefaultMaxIdleConns    = 5
+	DefaultMaxOpenConns    = 50
+	DefaultConnMaxIdleTime = 5 * time.Minute
+	DefaultConnMaxLifeTime = 10 * time.Minute
 )
 
 type Model struct {
 	Table string
+	Data  interface{}
 	DB    func() *gorm.DB
 }
 
-func (m *Model) NewMysql(dbc *types.DBCollector, mdt *types.MysqlDialect, f func() *gorm.Config, opts ...interface{}) (*gorm.DB, error) {
+func (m *Model) NewMysql(collector *types.DBCollector, dialect *types.MysqlDialect, options ...Option) (*gorm.DB, error) {
 	var newErr error
 	for i := 0; i < retryMaxTimes; i++ {
-		dbc.Once(func() {
-			cfg := f()
-			cfg.DisableAutomaticPing = true
-			if dbc.Pointer, newErr = gorm.Open(m.Dialector(mdt), cfg); newErr != nil {
+		collector.Once(func() {
+			config := &modelConfig{}
+			for _, option := range options {
+				option(config)
+			}
+			if config.logger == nil {
+				config.logger = m.NewLogger(dialect.Db)
+			}
+			gormConfig := &gorm.Config{DisableAutomaticPing: true, Logger: config.logger}
+			if collector.Pointer, newErr = gorm.Open(m.Dialector(dialect), gormConfig); newErr != nil {
 				return
 			}
-			var db *sql.DB
-			if db, newErr = dbc.Pointer.DB(); newErr != nil {
+			var sqlDB *sql.DB
+			if sqlDB, newErr = collector.Pointer.DB(); newErr != nil {
 				return
 			}
-			ol, maxIdle, maxOpen := len(opts), defaultMaxIdleConns, defaultMaxOpenConns
-			maxIdleTime, maxLifeTime := defaultConnMaxIdleTime, defaultConnMaxLifetime
-			if ol > 0 {
-				maxIdle = opts[0].(int)
+			if config.maxIdleConns == 0 {
+				config.maxIdleConns = DefaultMaxIdleConns
 			}
-			if ol > 1 {
-				maxOpen = opts[1].(int)
+			if config.maxOpenConns == 0 {
+				config.maxOpenConns = DefaultMaxOpenConns
 			}
-			if ol > 2 {
-				maxIdleTime = opts[2].(time.Duration)
+			if config.connMaxIdleTime == 0 {
+				config.connMaxIdleTime = DefaultConnMaxIdleTime
 			}
-			if ol > 3 {
-				maxLifeTime = opts[3].(time.Duration)
+			if config.connMaxLifeTime == 0 {
+				config.connMaxLifeTime = DefaultConnMaxLifeTime
 			}
-			db.SetMaxIdleConns(maxIdle)
-			db.SetMaxOpenConns(maxOpen)
-			db.SetConnMaxIdleTime(maxIdleTime)
-			db.SetConnMaxLifetime(maxLifeTime)
+			sqlDB.SetMaxIdleConns(config.maxIdleConns)
+			sqlDB.SetMaxOpenConns(config.maxOpenConns)
+			sqlDB.SetConnMaxIdleTime(config.connMaxIdleTime)
+			sqlDB.SetConnMaxLifetime(config.connMaxLifeTime)
 		})
 
 		if newErr == nil {
-			if dbc.Pointer == nil {
-				newErr = fmt.Errorf("new mysql %s is nil", mdt.Db)
+			if collector.Pointer == nil {
+				newErr = fmt.Errorf("new mysql %s is nil", dialect.Db)
 			} else {
 				var db *sql.DB
-				if db, newErr = dbc.Pointer.DB(); newErr == nil {
+				if db, newErr = collector.Pointer.DB(); newErr == nil {
 					newErr = db.Ping()
 				}
 			}
 		}
 
 		if newErr != nil {
-			dbc.Reset(func() { time.Sleep(retrySleepTime) })
+			collector.Reset(func() { time.Sleep(retrySleepTime) })
 		} else {
 			break
 		}
 	}
-	return dbc.Pointer, newErr
+	return collector.Pointer, newErr
 }

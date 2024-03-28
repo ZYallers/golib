@@ -17,31 +17,31 @@ type Redis struct {
 	Client func() *redis.Client
 }
 
-func (r *Redis) NewRedis(rdc *types.RedisCollector, cli *types.RedisClient, f func() *redis.Options) (*redis.Client, error) {
+func (r *Redis) NewRedis(collector *types.RedisCollector, client *types.RedisClient, optsFunc func() *redis.Options) (*redis.Client, error) {
 	var newErr error
 	for i := 0; i < retryMaxTimes; i++ {
-		rdc.Once(func() {
-			opts := &redis.Options{}
-			if f != nil {
-				opts = f()
+		collector.Once(func() {
+			if optsFunc == nil {
+				optsFunc = func() *redis.Options { return &redis.Options{} }
 			}
-			opts.Addr = cli.Host + ":" + cli.Port
-			opts.Password = cli.Pwd
-			opts.DB = cli.Db
-			rdc.Pointer = redis.NewClient(opts)
+			opts := optsFunc()
+			opts.Addr = client.Host + ":" + client.Port
+			opts.Password = client.Pwd
+			opts.DB = client.Db
+			collector.Pointer = redis.NewClient(opts)
 		})
 
-		if rdc.Pointer == nil {
-			newErr = fmt.Errorf("new redis(%s:%s) is nil", cli.Host, cli.Port)
+		if collector.Pointer == nil {
+			newErr = fmt.Errorf("new redis(%s:%s) is nil", client.Host, client.Port)
 		} else {
-			newErr = rdc.Pointer.Ping().Err()
+			newErr = collector.Pointer.Ping().Err()
 		}
 
 		if newErr != nil {
-			rdc.Reset(func() { time.Sleep(retrySleepTime) })
+			collector.Reset(func() { time.Sleep(retrySleepTime) })
 		} else {
 			break
 		}
 	}
-	return rdc.Pointer, newErr
+	return collector.Pointer, newErr
 }

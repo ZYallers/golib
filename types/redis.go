@@ -8,8 +8,10 @@ import (
 )
 
 type RedisClient struct {
-	Db              int
-	Host, Port, Pwd string
+	Host string
+	Port string
+	Pwd  string
+	Db   int
 }
 
 type RedisCollector struct {

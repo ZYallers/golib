@@ -9,11 +9,11 @@ import (
 )
 
 const (
-	defaultCharset          = "utf8mb4"
-	defaultLoc              = "Local"
-	defaultParseTime        = "true"
-	defaultMaxAllowedPacket = "0"
-	defaultTimeout          = "15s"
+	DefaultCharset          = "utf8mb4"
+	DefaultLoc              = "Local"
+	DefaultParseTime        = "true"
+	DefaultMaxAllowedPacket = "0"
+	DefaultTimeout          = "15s"
 )
 
 func (m *Model) Dialector(dialect *types.MysqlDialect) gorm.Dialector {
@@ -21,23 +21,23 @@ func (m *Model) Dialector(dialect *types.MysqlDialect) gorm.Dialector {
 }
 
 func (m *Model) ParseDSN(dialect *types.MysqlDialect) string {
-	charset := defaultCharset
+	charset := DefaultCharset
 	if dialect.Charset != "" {
 		charset = dialect.Charset
 	}
-	parseTime := defaultParseTime
+	parseTime := DefaultParseTime
 	if dialect.ParseTime != "" {
 		parseTime = dialect.ParseTime
 	}
-	loc := defaultLoc
+	loc := DefaultLoc
 	if dialect.Loc != "" {
 		loc = dialect.Loc
 	}
-	maxAllowedPacket := defaultMaxAllowedPacket
+	maxAllowedPacket := DefaultMaxAllowedPacket
 	if dialect.MaxAllowedPacket != "" {
 		maxAllowedPacket = dialect.MaxAllowedPacket
 	}
-	timeout := defaultTimeout
+	timeout := DefaultTimeout
 	if dialect.Timeout != "" {
 		timeout = dialect.Timeout
 	}

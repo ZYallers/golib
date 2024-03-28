@@ -8,7 +8,16 @@ import (
 )
 
 type MysqlDialect struct {
-	User, Pwd, Host, Port, Db, Charset, Loc, ParseTime, MaxAllowedPacket, Timeout string
+	Host             string
+	Port             string
+	User             string
+	Pwd              string
+	Db               string
+	Charset          string
+	Loc              string
+	ParseTime        string
+	MaxAllowedPacket string
+	Timeout          string
 }
 
 type DBCollector struct {
